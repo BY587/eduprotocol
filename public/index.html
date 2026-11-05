@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduProtocol - Smart School Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ brand:{
+ 50:'#f0fdf4',100:'#dcfce7',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d'
+} } } } }
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+ body{font-family:'Inter',sans-serif;}
+ .custom-scrollbar::-webkit-scrollbar{width:6px;height:6px;}
+ .custom-scrollbar::-webkit-scrollbar-track{background:#f1f5f9;}
+ .custom-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+ .nav-item.active{background:#16a34a;color:#fff;}
+</style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 antialiased flex flex-col overflow-hidden">
+
+<div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- Generic modal -->
+<div id="custom-modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+ <div id="custom-modal-box" class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transition-all scale-95 opacity-0">
+  <div class="flex items-center space-x-3 mb-4">
+   <div id="modal-icon-wrapper" class="w-12 h-12 rounded-full flex items-center justify-center text-xl"></div>
+   <div><h3 id="modal-title" class="text-lg font-bold text-slate-900"></h3>
+   <p class="text-xs text-slate-500">EduProtocol System</p></div>
+  </div>
+  <p id="modal-message" class="text-slate-600 text-sm mb-6"></p>
+  <div id="modal-actions" class="flex justify-end space-x-3"></div>
+ </div>
+</div>
+<!-- ============ AUTH ============ -->
+<div id="auth-screen" class="fixed inset-0 z-40 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 flex items-center justify-center p-4 overflow-y-auto custom-scrollbar">
+ <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-200 my-8">
+  <div class="text-center mb-6">
+   <div class="inline-flex items-center justify-center w-16 h-16 bg-brand-600 text-white rounded-2xl shadow-lg mb-4 text-2xl"><i class="fa-solid fa-school"></i></div>
+   <h1 class="text-2xl font-extrabold text-slate-900">EduProtocol</h1>
+   <p class="text-sm text-slate-500 mt-1">Smart School Administration Portal</p>
+  </div>
+  <div class="grid grid-cols-2 gap-2 mb-6">
+   <button id="auth-tab-login" onclick="showAuth('login')" class="py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold">Sign In</button>
+   <button id="auth-tab-reg" onclick="showAuth('reg')" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold">Register School</button>
+  </div>
+
+  <form id="form-login" onsubmit="doLogin(event)" class="space-y-4">
+   <div>
+    <label class="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wider">Email or SDMS Number</label>
+    <div class="relative"><span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
+     <input id="login-id" required autocomplete="username" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="you@mail.com or 12-digit SDMS"></div>
+   </div>
+   <div>
+    <label class="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wider">Password</label>
+    <div class="relative"><span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+     <input id="login-pass" type="password" required autocomplete="current-password" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="••••••••"></div>
+   </div>
+   <button class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition flex items-center justify-center space-x-2"><span>Sign In</span><i class="fa-solid fa-arrow-right"></i></button>
+   <p class="text-xs text-slate-500 text-center">Accounts are issued by your headmaster. Students sign in with their SDMS number.</p>
+  </form>
+
+  <form id="form-reg" onsubmit="doRegisterSchool(event)" class="space-y-3 hidden">
+   <div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-xs text-brand-800"><i class="fa-solid fa-circle-info mr-1"></i>Registering creates your <b>school</b> and your <b>Headmaster</b> account. Only the headmaster can create other accounts.</div>
+   <input id="reg-school" required placeholder="School Name" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <input id="reg-code" required placeholder="School Code (e.g. EP-001)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <input id="reg-motto" placeholder="School Motto (optional)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <input id="reg-hm-name" required placeholder="Headmaster Full Name" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <input id="reg-hm-email" type="email" required placeholder="Headmaster Email" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <input id="reg-hm-pass" type="password" required minlength="6" placeholder="Password (min 6 chars)" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+   <button class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow transition">Create School & Headmaster</button>
+  </form>
+  <div class="mt-6 text-center text-xs text-slate-400">Cloud-backed — data stored on the server database</div>
+ </div>
+</div>
+<!-- ============ APP ============ -->
+<div id="app-wrapper" class="h-full flex flex-col hidden">
+ <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-6 z-30 shrink-0">
+  <div class="flex items-center space-x-3">
+   <button onclick="toggleSidebar()" id="btn-sidebar-toggle" class="lg:hidden text-slate-600 p-2 rounded-lg"><i class="fa-solid fa-bars text-lg"></i></button>
+   <div class="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center shadow-md"><i class="fa-solid fa-school"></i></div>
+   <div><span class="font-bold text-slate-900 text-base md:text-lg">EduProtocol</span>
+   <span id="header-school" class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full"></span></div>
+  </div>
+  <div class="flex items-center space-x-2">
+   <button onclick="openNotifications()" class="relative flex items-center px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"><i class="fa-solid fa-bell"></i><span id="notif-badge" class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-rose-600 text-white text-[10px] rounded-full flex items-center justify-center"></span></button>
+   <button onclick="openAI()" class="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition"><i class="fa-solid fa-robot"></i><span class="hidden md:inline">AI Helper</span></button>
+   <button onclick="openPasswordModal()" class="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"><i class="fa-solid fa-key"></i><span class="hidden md:inline">Password</span></button>
+   <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-2xl">
+    <div id="user-avatar" class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs uppercase"></div>
+    <div class="text-left hidden sm:block"><div id="user-name" class="text-xs font-bold text-slate-900 leading-tight"></div>
+    <div id="user-role" class="text-[10px] text-brand-600 font-semibold uppercase leading-tight"></div></div>
+   </div>
+   <button onclick="doLogout()" class="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition"><i class="fa-solid fa-power-off"></i><span class="hidden md:inline">Logout</span></button>
+  </div>
+ </header>
+
+ <div class="flex-1 flex overflow-hidden relative">
+  <aside id="sidebar" class="absolute lg:relative inset-y-0 left-0 z-20 w-64 bg-slate-900 text-slate-300 -translate-x-full lg:translate-x-0 transition-transform duration-200 flex flex-col border-r border-slate-800">
+   <div class="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-800">Modules</div>
+   <nav id="main-nav" class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+    <button data-tab="dashboard" data-roles="Headmaster,DOS,DOD,Bursar,Teacher,Librarian" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-chart-pie w-5 text-center"></i><span>Dashboard</span></button>
+    <button data-tab="accounts" data-roles="Headmaster" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-users-gear w-5 text-center"></i><span>Accounts & Access</span></button>
+    <button data-tab="students" data-roles="Headmaster,DOS,DOD,Bursar,Teacher,Librarian" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-user-graduate w-5 text-center"></i><span>Students & SIM</span></button>
+    <button data-tab="subjects" data-roles="Headmaster,DOS" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-list-ul w-5 text-center"></i><span>Subjects</span></button>
+    <button data-tab="academics" data-roles="Headmaster,DOS,Teacher" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-book-open w-5 text-center"></i><span>Academics & Marks</span></button>
+    <button data-tab="timetable" data-roles="Headmaster,DOS,Teacher" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-calendar-days w-5 text-center"></i><span>Timetable</span></button>
+    <button data-tab="elearning" data-roles="Headmaster,DOS,Teacher" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-laptop-file w-5 text-center"></i><span>e-Learning</span></button>
+    <button data-tab="permissions" data-roles="Headmaster,DOD,DOS" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-file-signature w-5 text-center"></i><span>Permissions</span></button>
+    <button data-tab="messages" data-roles="Headmaster,DOS,DOD,Bursar,Teacher,Librarian" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-comments w-5 text-center"></i><span>Messages</span></button>
+    <button data-tab="discipline" data-roles="Headmaster,DOD" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-shield-halved w-5 text-center"></i><span>Discipline</span></button>
+    <button data-tab="finances" data-roles="Headmaster,Bursar" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-wallet w-5 text-center"></i><span>Fees & Wallet Ledger</span></button>
+    <button data-tab="attendance" data-roles="Headmaster,DOS,Teacher" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-clipboard-user w-5 text-center"></i><span>Attendance</span></button>
+    <button data-tab="library" data-roles="Headmaster,Librarian" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-book w-5 text-center"></i><span>Library</span></button>
+    <button data-tab="audit" data-roles="Headmaster,Librarian" class="nav-item w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-list-check w-5 text-center"></i><span>Activity Logs</span></button>
+   </nav>
+   <div class="p-4 border-t border-slate-800 text-xs text-slate-500 flex items-center justify-between"><span>EduProtocol v6</span><span class="text-brand-500 font-semibold">Active</span></div>
+  </aside>
+
+  <main class="flex-1 flex flex-col overflow-y-auto bg-slate-100 custom-scrollbar p-4 lg:p-8">
+   <div id="admin-view" class="space-y-6"></div>
+   <div id="student-portal" class="space-y-6 hidden"></div>
+  </main>
+ </div>
+</div>
+
+<!-- AI Assistant panel -->
+<div id="ai-panel" class="fixed bottom-4 right-4 z-[65] w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 hidden flex-col" style="height:70vh;max-height:560px;">
+ <div class="flex items-center justify-between px-4 py-3 bg-indigo-600 text-white rounded-t-2xl">
+  <div class="flex items-center space-x-2"><i class="fa-solid fa-robot"></i><span class="font-bold text-sm">EduProtocol AI Helper</span></div>
+  <button onclick="closeAI()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+ </div>
+ <div id="ai-messages" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 text-sm bg-slate-50"></div>
+ <div class="p-3 border-t border-slate-200">
+  <div id="ai-suggestions" class="flex flex-wrap gap-1.5 mb-2"></div>
+  <form onsubmit="askAI(event)" class="flex gap-2">
+   <input id="ai-input" placeholder="Ask me anything about the system..." class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+   <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl"><i class="fa-solid fa-paper-plane"></i></button>
+  </form>
+ </div>
+</div>
+<button id="ai-fab" onclick="openAI()" class="fixed bottom-4 right-4 z-[64] w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hidden items-center justify-center text-xl"><i class="fa-solid fa-robot"></i></button>
+
+<!-- Generic form modal (filled by JS) -->
+<div id="app-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+ <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+  <div class="flex justify-between items-center mb-6"><h3 id="app-modal-title" class="text-xl font-bold text-slate-900"></h3>
+  <button onclick="closeModal('app-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+  <div id="app-modal-body"></div>
+ </div>
+</div>
+
+<!-- Report card modal -->
+<div id="report-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+ <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 md:p-8 max-h-[92vh] overflow-y-auto custom-scrollbar">
+  <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-slate-900">Report Card</h3>
+  <button onclick="closeModal('report-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+  <div id="report-content"></div>
+  <div class="flex justify-end space-x-3 mt-6">
+   <button onclick="closeModal('report-modal')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl">Close</button>
+   <button onclick="printReport()" class="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl flex items-center space-x-2"><i class="fa-solid fa-print"></i><span>Print</span></button>
+   <button onclick="downloadReport()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl flex items-center space-x-2"><i class="fa-solid fa-download"></i><span>CSV</span></button>
+  </div>
+ </div>
+</div>
+<script>
+"use strict";
+/* ===================== CORE STATE ===================== */
+const STORE='eduprotocol_v6';
+const SESSION='eduprotocol_session_v6';
+let DB={version:6,schools:[]};
+let schoolId=null;
+let S=null;            // active school.state
+let school=null;       // active school record
+let user=null;         // current user
+
+const $=id=>document.getElementById(id);
+const uid=()=> (crypto.randomUUID?crypto.randomUUID():'id'+Date.now()+Math.random().toString(16).slice(2));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now=()=>new Date().toISOString().slice(0,16).replace('T',' ');
+const today=()=>new Date().toISOString().slice(0,10);
+const ROLES=['Headmaster','DOS','DOD','Bursar','Teacher','Librarian','Parent'];
+const BADGES={Headmaster:'Head Teacher',DOS:'Dir. of Studies',DOD:'Dir. of Discipline',Bursar:'School Bursar',Teacher:'Teacher',Librarian:'Librarian',Parent:'Parent / Guardian',Student:'Student'};
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const PERIODS=['08:00-08:40','08:40-09:20','09:20-10:00','10:20-11:00','11:00-11:40','11:40-12:20','14:00-14:40','14:40-15:20'];
+const CLASSES=['Senior 1','Senior 2','Senior 3','Senior 4','Senior 5','Senior 6'];
+const DEFAULT_SUBJECTS=['Mathematics','English','Kinyarwanda','Biology','Chemistry','Physics','Geography','History','Literature in English','Economics','Computer Science','Entrepreneurship','French','Kiswahili','General Paper','Physical Education'];
+const PAY_SERVICES=['School Fees','Exam Fees','Library Fine','Cafeteria / Meals','Transport / Bus','Uniform & Supplies','Field Trip','Boarding Fees','Out-of-School Merchant','Other Service'];
+
+function money(a){try{return new Intl.NumberFormat('en-RW',{style:'currency',currency:(school&&school.currency)||'RWF'}).format(Number(a)||0);}catch(e){return ((school&&school.currency)||'RWF')+' '+(Number(a)||0).toFixed(2);}}
+
+/* ===================== PASSWORDS ===================== */
+async function hashPw(pw,salt){
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+ const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:150000,hash:'SHA-256'},key,256);
+ return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function makeCred(pw){ if((pw||'').length<6) throw new Error('Password must be at least 6 characters.'); const salt=uid(); return {salt,pwHash:await hashPw(pw,salt)}; }
+
+/* ===================== PERSISTENCE ===================== */
+function loadDB(){ try{const r=localStorage.getItem(STORE); DB=r?JSON.parse(r):{version:6,schools:[]}; if(!Array.isArray(DB.schools))throw 0;}catch(e){DB={version:6,schools:[]};} }
+function saveDB(){ try{localStorage.setItem(STORE,JSON.stringify(DB));return true;}catch(e){toast('Could not save to storage.','error');return false;} }
+function save(){ if(school){school.state=S;} return saveDB(); }
+
+function blankState(){ return {users:[],students:[],transactions:[],discipline:[],attendance:{},auditLogs:[],subjects:[...DEFAULT_SUBJECTS],library:{books:[],loans:[]},timetable:{},elearning:{resources:[],quizzes:[]},quizResults:[],permissions:{},messages:[],notices:[],notifications:[]}; }
+function ensureCollections(){ if(!S)return; ['students','transactions','discipline','auditLogs','messages','notices','notifications','quizResults'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];}); if(!S.timetable)S.timetable={}; if(!S.attendance)S.attendance={}; if(!S.library)S.library={books:[],loans:[]}; if(!S.elearning)S.elearning={resources:[],quizzes:[]}; if(!S.subjects)S.subjects=[...DEFAULT_SUBJECTS]; if(!S.permissions||Array.isArray(S.permissions))S.permissions={}; }
+</script>
+<script>
+/* ===================== UI HELPERS ===================== */
+function toast(msg,type='success'){
+ const c=$('toast-container'); const colors={success:'bg-brand-600',error:'bg-rose-600',info:'bg-slate-800',warn:'bg-amber-500'};
+ const icons={success:'fa-check',error:'fa-xmark',info:'fa-circle-info',warn:'fa-triangle-exclamation'};
+ const el=document.createElement('div');
+ el.className=`pointer-events-auto flex items-center space-x-2 ${colors[type]||colors.info} text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium translate-x-4 opacity-0 transition-all`;
+ el.innerHTML=`<i class="fa-solid ${icons[type]||icons.info}"></i><span>${esc(msg)}</span>`;
+ c.appendChild(el); requestAnimationFrame(()=>{el.classList.remove('translate-x-4','opacity-0');});
+ setTimeout(()=>{el.classList.add('opacity-0');setTimeout(()=>el.remove(),300);},3200);
+}
+function openModal(id){const m=$(id);m.classList.remove('hidden');}
+function closeModal(id){$(id).classList.add('hidden');}
+function showForm(title,bodyHtml){ $('app-modal-title').textContent=title; $('app-modal-body').innerHTML=bodyHtml; openModal('app-modal'); }
+
+function confirmDialog(title,message,onYes,yesLabel='Confirm',danger=true){
+ $('modal-title').textContent=title; $('modal-message').textContent=message;
+ const w=$('modal-icon-wrapper'); w.className='w-12 h-12 rounded-full flex items-center justify-center text-xl '+(danger?'bg-rose-100 text-rose-600':'bg-brand-100 text-brand-600');
+ w.innerHTML=`<i class="fa-solid ${danger?'fa-triangle-exclamation':'fa-circle-question'}"></i>`;
+ $('modal-actions').innerHTML='';
+ const cancel=document.createElement('button'); cancel.className='px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl'; cancel.textContent='Cancel'; cancel.onclick=()=>closeGeneric();
+ const ok=document.createElement('button'); ok.className='px-4 py-2 '+(danger?'bg-rose-600 hover:bg-rose-700':'bg-brand-600 hover:bg-brand-700')+' text-white text-sm font-semibold rounded-xl'; ok.textContent=yesLabel; ok.onclick=()=>{closeGeneric();onYes&&onYes();};
+ $('modal-actions').append(cancel,ok);
+ const bd=$('custom-modal-backdrop'),box=$('custom-modal-box'); bd.classList.remove('hidden'); requestAnimationFrame(()=>{box.classList.remove('scale-95','opacity-0');});
+}
+function closeGeneric(){const bd=$('custom-modal-backdrop'),box=$('custom-modal-box'); box.classList.add('scale-95','opacity-0'); setTimeout(()=>bd.classList.add('hidden'),150);}
+
+/* ===================== AUDIT ===================== */
+function audit(action,detail,category='System'){
+ if(!S)return;
+ S.auditLogs.unshift({id:uid(),ts:now(),actor:(user&&user.name)||'System',role:(user&&user.role)||'-',category,action,detail:detail||''});
+ if(S.auditLogs.length>1000)S.auditLogs.length=1000;
+}
+
+/* ===================== AUTH ===================== */
+function showAuth(which){
+ const l=which==='login';
+ $('form-login').classList.toggle('hidden',!l); $('form-reg').classList.toggle('hidden',l);
+ $('auth-tab-login').className='py-2.5 rounded-xl text-sm font-semibold '+(l?'bg-brand-600 text-white':'bg-slate-100 text-slate-600');
+ $('auth-tab-reg').className='py-2.5 rounded-xl text-sm font-semibold '+(!l?'bg-brand-600 text-white':'bg-slate-100 text-slate-600');
+}
+
+async function doRegisterSchool(e){
+ e.preventDefault();
+ const name=$('reg-school').value.trim(), code=$('reg-code').value.trim().toUpperCase();
+ const hmName=$('reg-hm-name').value.trim(), hmEmail=$('reg-hm-email').value.trim().toLowerCase(), pw=$('reg-hm-pass').value;
+ if(DB.schools.some(s=>s.code===code)){toast('A school with that code already exists.','error');return;}
+ if(DB.schools.some(s=>s.state.users.some(u=>u.email===hmEmail))){toast('That email is already registered.','error');return;}
+ let cred; try{cred=await makeCred(pw);}catch(err){toast(err.message,'error');return;}
+ const st=blankState();
+ const hm={id:uid(),name:hmName,email:hmEmail,role:'Headmaster',subjects:[],classes:[],active:true,salt:cred.salt,pwHash:cred.pwHash,created:now(),mustReset:false};
+ st.users.push(hm);
+ const rec={id:uid(),name,code,motto:$('reg-motto').value.trim(),currency:'RWF',created:now(),state:st};
+ DB.schools.push(rec); saveDB();
+ school=rec; schoolId=rec.id; S=rec.state; user=hm;
+ audit('School created','School "'+name+'" registered with headmaster '+hmName,'Account');
+ S.auditLogs.unshift({id:uid(),ts:now(),actor:hmName,role:'Headmaster',category:'Auth',action:'Signed in',detail:''});
+ save(); startSession(); enterApp();
+ toast('Welcome, '+hmName+'! Your school is ready.','success');
+}
+
+async function doLogin(e){
+ e.preventDefault();
+ const idv=$('login-id').value.trim(), pw=$('login-pass').value;
+ const idl=idv.toLowerCase();
+ for(const rec of DB.schools){
+  // staff
+  const u=rec.state.users.find(x=>x.email&&x.email.toLowerCase()===idl);
+  if(u){
+   if(u.active===false){toast('This account is deactivated. Contact your headmaster.','error');return;}
+   const h=await hashPw(pw,u.salt);
+   if(h===u.pwHash){ loginAs(rec,u,null); return; }
+   toast('Incorrect password.','error');return;
+  }
+  // student by SDMS or email
+  const stu=rec.state.students.find(x=>x.sdms===idv||(x.email&&x.email.toLowerCase()===idl));
+  if(stu){
+   if(!stu.salt){toast('No login set for this student yet. Ask the office.','error');return;}
+   const h=await hashPw(pw,stu.salt);
+   if(h===stu.pwHash){ loginAs(rec,{id:stu.id,name:stu.name,role:'Student'},stu); return; }
+   toast('Incorrect password.','error');return;
+  }
+ }
+ toast('No account found for that email / SDMS number.','error');
+}
+function loginAs(rec,u,stu){
+ school=rec;schoolId=rec.id;S=rec.state;user=Object.assign({},u);if(stu)user.studentId=stu.id;
+ audit('Signed in','','Auth'); save(); startSession(); enterApp();
+ toast('Signed in as '+user.name,'success');
+}
+function startSession(){ try{localStorage.setItem(SESSION,JSON.stringify({schoolId,userId:user.id,role:user.role,studentId:user.studentId||null}));}catch(e){} }
+function doLogout(){ confirmDialog('Sign Out','Are you sure you want to sign out?',()=>{ audit('Signed out','','Auth'); save(); localStorage.removeItem(SESSION); location.reload(); },'Sign Out',false); }
+function resumeSession(){
+ let s;try{s=JSON.parse(localStorage.getItem(SESSION)||'null');}catch(e){return false;}
+ if(!s)return false;
+ const rec=DB.schools.find(r=>r.id===s.schoolId); if(!rec)return false;
+ school=rec;schoolId=rec.id;S=rec.state;
+ if(s.role==='Student'){ const stu=S.students.find(x=>x.id===s.studentId); if(!stu)return false; user={id:stu.id,name:stu.name,role:'Student',studentId:stu.id}; }
+ else { const u=S.users.find(x=>x.id===s.userId); if(!u||u.active===false)return false; user=Object.assign({},u); }
+ return true;
+}
+</script>
+<script>
+/* ===================== APP SHELL / RBAC ===================== */
+let currentTab='dashboard';
+function enterApp(){
+ ensureCollections();
+ $('auth-screen').classList.add('hidden');
+ $('app-wrapper').classList.remove('hidden');
+ $('ai-fab').classList.remove('hidden'); $('ai-fab').classList.add('flex');
+ $('header-school').textContent=school.name+' · '+school.code;
+ $('user-name').textContent=user.name;
+ $('user-role').textContent=BADGES[user.role]||user.role;
+ $('user-avatar').textContent=(user.name||'?').trim().charAt(0);
+ buildNav();
+ aiGreet();
+ updateNotifBell();
+ if(user.role==='Student'){ document.querySelector('#sidebar nav').classList.add('hidden'); $('admin-view').classList.add('hidden'); $('student-portal').classList.remove('hidden'); renderStudentPortal(); }
+ else if(user.role==='Parent'){ document.querySelector('#sidebar nav').classList.add('hidden'); $('admin-view').classList.add('hidden'); $('student-portal').classList.remove('hidden'); renderParentPortal(); }
+ else { switchTab('dashboard'); }
+}
+function can(role,...allowed){ return allowed.includes(role); }
+function buildNav(){
+ document.querySelectorAll('#main-nav .nav-item').forEach(btn=>{
+  const roles=(btn.dataset.roles||'').split(',');
+  if(roles.includes(user.role)){ btn.classList.remove('hidden'); btn.onclick=()=>switchTab(btn.dataset.tab); }
+  else btn.classList.add('hidden');
+ });
+}
+function switchTab(tab){
+ currentTab=tab;
+ document.querySelectorAll('#main-nav .nav-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+ if(window.innerWidth<1024) $('sidebar').classList.add('-translate-x-full');
+ const v=$('admin-view'); v.classList.remove('hidden');
+ const r={dashboard:renderDashboard,accounts:renderAccounts,students:renderStudents,subjects:renderSubjects,academics:renderAcademics,discipline:renderDiscipline,finances:renderFinances,attendance:renderAttendance,library:renderLibrary,audit:renderAudit,timetable:renderTimetable,elearning:renderElearning,permissions:renderPermissions,messages:renderMessages}[tab];
+ v.innerHTML=''; (r||renderDashboard)();
+}
+function toggleSidebar(){ $('sidebar').classList.toggle('-translate-x-full'); }
+
+/* ===================== PASSWORD CHANGE ===================== */
+function openPasswordModal(){
+ showForm('Change Password',`
+  <form onsubmit="changePassword(event)" class="space-y-4">
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Current Password</label>
+    <input id="pw-cur" type="password" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">New Password (min 6)</label>
+    <input id="pw-new" type="password" minlength="6" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button>
+    <button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Update</button></div>
+  </form>`);
+}
+async function changePassword(e){
+ e.preventDefault();
+ const cur=$('pw-cur').value,nw=$('pw-new').value;
+ let acct=user.role==='Student'?S.students.find(s=>s.id===user.studentId):S.users.find(u=>u.id===user.id);
+ if(!acct||!acct.salt){toast('Account not found.','error');return;}
+ const h=await hashPw(cur,acct.salt);
+ if(h!==acct.pwHash){toast('Current password is incorrect.','error');return;}
+ const c=await makeCred(nw); acct.salt=c.salt; acct.pwHash=c.pwHash; acct.mustReset=false;
+ audit('Password changed','','Account'); save(); closeModal('app-modal'); toast('Password updated.','success');
+}
+</script>
+<script>
+/* ===================== HELPERS: cards ===================== */
+function pageHead(title,sub,actionsHtml=''){
+ return `<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+  <div><h1 class="text-2xl font-bold text-slate-900">${esc(title)}</h1><p class="text-sm text-slate-500 mt-0.5">${esc(sub)}</p></div>
+  <div class="flex flex-wrap gap-2">${actionsHtml}</div></div>`;
+}
+function stat(label,val,icon,color){
+ return `<div class="bg-white rounded-2xl border border-slate-200 p-5 flex items-center space-x-4">
+   <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg ${color}"><i class="fa-solid ${icon}"></i></div>
+   <div><div class="text-2xl font-extrabold text-slate-900">${val}</div><div class="text-xs text-slate-500 font-medium">${esc(label)}</div></div></div>`;
+}
+function card(inner,cls=''){return `<div class="bg-white rounded-2xl border border-slate-200 p-5 ${cls}">${inner}</div>`;}
+function btn(label,onclick,cls='bg-brand-600 hover:bg-brand-700 text-white',icon=''){
+ return `<button onclick="${onclick}" class="px-4 py-2.5 ${cls} text-sm font-semibold rounded-xl flex items-center space-x-2">${icon?`<i class="fa-solid ${icon}"></i>`:''}<span>${esc(label)}</span></button>`;
+}
+function checkGrid(name,options,selected=[]){
+ return `<div class="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl p-2">`+
+  options.map(o=>`<label class="flex items-center space-x-2 text-sm px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" name="${name}" value="${esc(o)}" ${selected.includes(o)?'checked':''} class="rounded text-brand-600"> <span>${esc(o)}</span></label>`).join('')+`</div>`;
+}
+function collectChecks(name){return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(i=>i.value);}
+
+/* ===================== ACCOUNTS & ACCESS (Headmaster only) ===================== */
+function renderAccounts(){
+ if(user.role!=='Headmaster'){$('admin-view').innerHTML=card('<p class="text-slate-500">Only the Headmaster can manage accounts.</p>');return;}
+ const staff=S.users;
+ $('admin-view').innerHTML=pageHead('Accounts & Access','Create and manage staff accounts. Only you can issue accounts.',
+   btn('New Staff Account','openAccountForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-user-plus'))
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+    ${stat('Total Accounts',staff.length,'fa-users','bg-brand-100 text-brand-700')}
+    ${stat('Active',staff.filter(u=>u.active!==false).length,'fa-user-check','bg-emerald-100 text-emerald-700')}
+    ${stat('Teachers',staff.filter(u=>u.role==='Teacher').length,'fa-chalkboard-user','bg-sky-100 text-sky-700')}
+    ${stat('Deactivated',staff.filter(u=>u.active===false).length,'fa-user-slash','bg-rose-100 text-rose-700')}</div>`
+  +card(`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200">
+    <th class="py-2 pr-3">Name</th><th class="py-2 pr-3">Email</th><th class="py-2 pr-3">Role</th><th class="py-2 pr-3">Subjects / Scope</th><th class="py-2 pr-3">Status</th><th class="py-2 text-right">Actions</th></tr></thead><tbody>`
+   +staff.map(u=>`<tr class="border-b border-slate-100">
+     <td class="py-2.5 pr-3 font-semibold text-slate-800">${esc(u.name)}${u.id===user.id?' <span class="text-[10px] text-brand-600">(you)</span>':''}</td>
+     <td class="py-2.5 pr-3 text-slate-600">${esc(u.email)}</td>
+     <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">${esc(BADGES[u.role]||u.role)}</span></td>
+     <td class="py-2.5 pr-3 text-xs text-slate-500">${u.role==='Teacher'?(u.subjects&&u.subjects.length?esc(u.subjects.join(', ')):'<span class="text-amber-600">No subjects assigned</span>'):(u.role==='Parent'?(u.children&&u.children.length?esc(u.children.map(cid=>{const c=S.students.find(x=>x.id===cid);return c?c.name:'?';}).join(', ')):'<span class="text-amber-600">No children linked</span>'):'—')}</td>
+     <td class="py-2.5 pr-3">${u.active===false?'<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">Inactive</span>':'<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Active</span>'}</td>
+     <td class="py-2.5 text-right whitespace-nowrap">
+      ${(u.role==='Teacher'||u.role==='Parent')?`<button onclick="openAccountForm('${u.id}')" class="text-sky-600 hover:text-sky-800 px-1.5" title="Edit"><i class="fa-solid fa-pen"></i></button>`:(u.id!==user.id?`<button onclick="openAccountForm('${u.id}')" class="text-sky-600 hover:text-sky-800 px-1.5"><i class="fa-solid fa-pen"></i></button>`:'')}
+      <button onclick="resetStaffPw('${u.id}')" class="text-amber-600 hover:text-amber-800 px-1.5" title="Reset password"><i class="fa-solid fa-key"></i></button>
+      ${u.id!==user.id?`<button onclick="toggleStaff('${u.id}')" class="${u.active===false?'text-emerald-600':'text-rose-600'} hover:opacity-70 px-1.5" title="Activate/Deactivate"><i class="fa-solid ${u.active===false?'fa-user-check':'fa-user-slash'}"></i></button>`:''}
+     </td></tr>`).join('')
+   +`</tbody></table></div>`,'mt-4');
+}
+function openAccountForm(id){
+ const u=id?S.users.find(x=>x.id===id):null;
+ const subjectList=S.subjects&&S.subjects.length?S.subjects:DEFAULT_SUBJECTS;
+ showForm(u?'Edit Account':'New Staff Account',`
+  <form onsubmit="saveAccount(event,'${id||''}')" class="space-y-4">
+   <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Full Name</label><input id="ac-name" required value="${u?esc(u.name):''}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Email</label><input id="ac-email" type="email" required value="${u?esc(u.email):''}" ${u?'readonly':''} class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm ${u?'opacity-60':''}"></div>
+   </div>
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Role</label>
+    <select id="ac-role" onchange="toggleTeacherScope()" ${u?'disabled':''} class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm ${u?'opacity-60':''}">
+     ${ROLES.map(r=>`<option value="${r}" ${u&&u.role===r?'selected':''}>${esc(BADGES[r])}</option>`).join('')}</select></div>
+   <div id="ac-teacher-scope" class="${(u&&u.role==='Teacher')?'':'hidden'} space-y-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Assigned Subjects <span class="text-slate-400 font-normal">(teacher can only record marks for these)</span></label>
+     ${checkGrid('ac-subjects',subjectList,u?(u.subjects||[]):[])}</div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Assigned Classes <span class="text-slate-400 font-normal">(optional)</span></label>
+     ${checkGrid('ac-classes',CLASSES,u?(u.classes||[]):[])}</div>
+   </div>
+   <div id="ac-parent-scope" class="${(u&&u.role==='Parent')?'':'hidden'} space-y-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Linked Children <span class="text-slate-400 font-normal">(parent monitors these students)</span></label>
+     ${S.students.length?`<div class="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl p-2">`+S.students.map(st=>`<label class="flex items-center space-x-2 text-sm px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="checkbox" name="ac-children" value="${st.id}" ${u&&u.children&&u.children.includes(st.id)?'checked':''} class="rounded text-brand-600"> <span>${esc(st.name)} — ${esc(st.class||'')} (SDMS ${esc(st.sdms)})</span></label>`).join('')+`</div>`:'<p class="text-xs text-amber-600">Enroll students first, then link them here.</p>'}</div>
+   </div>
+   ${u?'':`<div><label class="block text-xs font-semibold text-slate-600 mb-1">Temporary Password (min 6)</label><input id="ac-pass" type="text" required minlength="6" value="Edu@${Math.floor(1000+Math.random()*9000)}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono"><p class="text-xs text-slate-400 mt-1">Share this with the staff member; they can change it after first login.</p></div>`}
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button>
+    <button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">${u?'Save Changes':'Create Account'}</button></div>
+  </form>`);
+}
+function toggleTeacherScope(){ const r=$('ac-role').value; $('ac-teacher-scope').classList.toggle('hidden',r!=='Teacher'); $('ac-parent-scope').classList.toggle('hidden',r!=='Parent'); }
+async function saveAccount(e,id){
+ e.preventDefault();
+ const name=$('ac-name').value.trim();
+ if(id){
+  const u=S.users.find(x=>x.id===id); if(!u)return; u.name=name;
+  if(u.role==='Teacher'){ u.subjects=collectChecks('ac-subjects'); u.classes=collectChecks('ac-classes'); }
+  if(u.role==='Parent'){ u.children=collectChecks('ac-children'); }
+  audit('Account updated','Updated '+u.name+' ('+u.role+')','Account'); save(); closeModal('app-modal'); renderAccounts(); toast('Account updated.','success'); return;
+ }
+ const email=$('ac-email').value.trim().toLowerCase(), role=$('ac-role').value, pw=$('ac-pass').value;
+ if(S.users.some(u=>u.email===email)||S.students.some(s=>s.email&&s.email.toLowerCase()===email)){toast('That email is already in use.','error');return;}
+ let cred; try{cred=await makeCred(pw);}catch(err){toast(err.message,'error');return;}
+ const u={id:uid(),name,email,role,subjects:role==='Teacher'?collectChecks('ac-subjects'):[],classes:role==='Teacher'?collectChecks('ac-classes'):[],children:role==='Parent'?collectChecks('ac-children'):[],active:true,salt:cred.salt,pwHash:cred.pwHash,created:now(),mustReset:true};
+ S.users.push(u);
+ audit('Account created',role+' account for '+name+' ('+email+')','Account'); save(); closeModal('app-modal'); renderAccounts();
+ confirmDialog('Account Created','Account for '+name+' created.\n\nLogin email: '+email+'\nTemporary password: '+pw,()=>{},'Got it',false);
+}
+function toggleStaff(id){ const u=S.users.find(x=>x.id===id); if(!u)return; u.active=u.active===false; audit('Account '+(u.active?'activated':'deactivated'),u.name,'Account'); save(); renderAccounts(); toast('Account '+(u.active?'activated':'deactivated')+'.','info'); }
+function resetStaffPw(id){
+ const u=S.users.find(x=>x.id===id); if(!u)return;
+ const np='Edu@'+Math.floor(1000+Math.random()*9000);
+ confirmDialog('Reset Password','Reset password for '+u.name+'? A new temporary password will be generated.',async()=>{ const c=await makeCred(np); u.salt=c.salt;u.pwHash=c.pwHash;u.mustReset=true; audit('Password reset','For '+u.name,'Account'); save(); confirmDialog('Password Reset','New temporary password for '+u.name+':\n\n'+np,()=>{},'Copy & Close',false); },'Reset',false);
+}
+</script>
+<script>
+/* ===================== SUBJECTS (master list, flexible) ===================== */
+function renderSubjects(){
+ if(!can(user.role,'Headmaster','DOS')){$('admin-view').innerHTML=card('<p class="text-slate-500">Not permitted.</p>');return;}
+ const subs=S.subjects||[];
+ $('admin-view').innerHTML=pageHead('Subjects','Flexible catalogue — no fixed combinations. Every subject is available to every student; report cards show only subjects a student actually has marks in.',
+   btn('Add Subject','openSubjectForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-plus'))
+  +card(`<div class="flex flex-wrap gap-2">`+
+    (subs.length?subs.map(s=>`<span class="inline-flex items-center space-x-2 bg-brand-50 border border-brand-200 text-brand-800 px-3 py-1.5 rounded-full text-sm font-medium"><span>${esc(s)}</span><button onclick="removeSubject('${esc(s).replace(/'/g,"\\'")}')" class="text-brand-500 hover:text-rose-600"><i class="fa-solid fa-xmark"></i></button></span>`).join(''):'<p class="text-slate-500 text-sm">No subjects yet.</p>')
+   +`</div>`,'mt-4');
+}
+function openSubjectForm(){
+ showForm('Add Subject',`<form onsubmit="addSubject(event)" class="space-y-4">
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Subject Name</label><input id="sub-name" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm" placeholder="e.g. Advanced Mathematics"></div>
+   <div class="flex justify-end space-x-3"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Add</button></div></form>`);
+}
+function addSubject(e){ e.preventDefault(); const n=$('sub-name').value.trim(); if(!n)return; if(!S.subjects)S.subjects=[]; if(S.subjects.some(s=>s.toLowerCase()===n.toLowerCase())){toast('Subject already exists.','warn');return;} S.subjects.push(n); audit('Subject added',n,'Academics'); save(); closeModal('app-modal'); renderSubjects(); toast('Subject added.','success'); }
+function removeSubject(n){ confirmDialog('Remove Subject','Remove "'+n+'" from the catalogue? Existing recorded marks are kept.',()=>{ S.subjects=S.subjects.filter(s=>s!==n); audit('Subject removed',n,'Academics'); save(); renderSubjects(); toast('Subject removed.','info'); }); }
+
+/* ===================== STUDENTS & SIM ===================== */
+function genSDMS(){ let n; do{ n=String(Math.floor(100000000000+Math.random()*899999999999)); }while(S.students.some(s=>s.sdms===n)); return n; }
+function renderStudents(){
+ const canEnroll=can(user.role,'Headmaster','DOS');
+ const list=S.students;
+ $('admin-view').innerHTML=pageHead('Students & SIM','Student Information Management — enroll, track and issue student logins.',
+   (canEnroll?btn('Enroll Student','openStudentForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-user-plus'):''))
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+    ${stat('Total Students',list.length,'fa-user-graduate','bg-brand-100 text-brand-700')}
+    ${stat('Boys',list.filter(s=>s.gender==='Male').length,'fa-person','bg-sky-100 text-sky-700')}
+    ${stat('Girls',list.filter(s=>s.gender==='Female').length,'fa-person-dress','bg-pink-100 text-pink-700')}
+    ${stat('With Login',list.filter(s=>s.salt).length,'fa-right-to-bracket','bg-emerald-100 text-emerald-700')}</div>`
+  +card(`<div class="flex items-center justify-between mb-3"><input id="stu-search" oninput="filterStudents()" placeholder="Search name / SDMS / class..." class="w-full sm:w-72 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+   <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200">
+    <th class="py-2 pr-3">Name</th><th class="py-2 pr-3">SDMS</th><th class="py-2 pr-3">Class</th><th class="py-2 pr-3">Gender</th><th class="py-2 pr-3">Wallet</th><th class="py-2 text-right">Actions</th></tr></thead>
+    <tbody id="stu-tbody"></tbody></table></div>`,'mt-4');
+ filterStudents();
+}
+function filterStudents(){
+ const q=($('stu-search')?$('stu-search').value:'').toLowerCase();
+ const canEdit=can(user.role,'Headmaster','DOS');
+ const rows=S.students.filter(s=>!q||s.name.toLowerCase().includes(q)||s.sdms.includes(q)||(s.class||'').toLowerCase().includes(q));
+ $('stu-tbody').innerHTML=rows.length?rows.map(s=>`<tr class="border-b border-slate-100">
+   <td class="py-2.5 pr-3 font-semibold text-slate-800">${esc(s.name)}</td>
+   <td class="py-2.5 pr-3 font-mono text-xs text-slate-600">${esc(s.sdms)}</td>
+   <td class="py-2.5 pr-3">${esc(s.class||'—')}</td>
+   <td class="py-2.5 pr-3">${esc(s.gender||'—')}</td>
+   <td class="py-2.5 pr-3 font-semibold ${(s.wallet||0)<0?'text-rose-600':'text-slate-800'}">${money(s.wallet||0)}</td>
+   <td class="py-2.5 text-right whitespace-nowrap">
+    <button onclick="viewStudent('${s.id}')" class="text-slate-600 hover:text-slate-900 px-1.5" title="Profile"><i class="fa-solid fa-eye"></i></button>
+    <button onclick="openReport('${s.id}')" class="text-brand-600 hover:text-brand-800 px-1.5" title="Report Card"><i class="fa-solid fa-file-lines"></i></button>
+    ${canEdit?`<button onclick="openStudentForm('${s.id}')" class="text-sky-600 hover:text-sky-800 px-1.5" title="Edit"><i class="fa-solid fa-pen"></i></button>
+    <button onclick="resetStudentPw('${s.id}')" class="text-amber-600 hover:text-amber-800 px-1.5" title="Reset login"><i class="fa-solid fa-key"></i></button>`:''}
+   </td></tr>`).join(''):'<tr><td colspan="6" class="py-6 text-center text-slate-400">No students found.</td></tr>';
+}
+function openStudentForm(id){
+ const s=id?S.students.find(x=>x.id===id):null;
+ showForm(s?'Edit Student':'Enroll Student',`
+  <form onsubmit="saveStudent(event,'${id||''}')" class="space-y-4">
+   <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Full Name</label><input id="st-name" required value="${s?esc(s.name):''}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Class</label><select id="st-class" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${CLASSES.map(c=>`<option ${s&&s.class===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Gender</label><select id="st-gender" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option ${s&&s.gender==='Male'?'selected':''}>Male</option><option ${s&&s.gender==='Female'?'selected':''}>Female</option></select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Date of Birth</label><input id="st-dob" type="date" value="${s?esc(s.dob||''):''}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Guardian Name</label><input id="st-guardian" value="${s?esc(s.guardian||''):''}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Guardian Phone</label><input id="st-phone" value="${s?esc(s.phone||''):''}" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+   </div>
+   ${s?'':`<div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-xs text-brand-800"><i class="fa-solid fa-circle-info mr-1"></i>On enrollment the student receives a unique 12-digit <b>SDMS number</b> and a <b>login password</b> (shown next). Students sign in with their SDMS + password.</div>`}
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">${s?'Save':'Enroll'}</button></div>
+  </form>`);
+}
+async function saveStudent(e,id){
+ e.preventDefault();
+ const data={name:$('st-name').value.trim(),class:$('st-class').value,gender:$('st-gender').value,dob:$('st-dob').value,guardian:$('st-guardian').value.trim(),phone:$('st-phone').value.trim()};
+ if(id){ const s=S.students.find(x=>x.id===id); Object.assign(s,data); audit('Student updated',s.name,'SIM'); save(); closeModal('app-modal'); renderStudents(); toast('Student updated.','success'); return; }
+ const sdms=genSDMS(); const pw='Stu@'+Math.floor(1000+Math.random()*9000);
+ const cred=await makeCred(pw);
+ const s=Object.assign({id:uid(),sdms,wallet:0,grades:[],email:'',salt:cred.salt,pwHash:cred.pwHash,mustReset:true,created:now()},data);
+ S.students.push(s);
+ audit('Student enrolled',s.name+' (SDMS '+sdms+')','SIM'); save(); closeModal('app-modal'); renderStudents();
+ confirmDialog('Student Enrolled','\u2705 '+s.name+' enrolled.\n\nSDMS Number: '+sdms+'\nLogin Password: '+pw+'\n\nStudents sign in on the login screen using the SDMS number and this password.',()=>{},'Copy & Close',false);
+}
+function resetStudentPw(id){ const s=S.students.find(x=>x.id===id); const np='Stu@'+Math.floor(1000+Math.random()*9000); confirmDialog('Reset Student Login','Reset login password for '+s.name+'?',async()=>{ const c=await makeCred(np); s.salt=c.salt;s.pwHash=c.pwHash;s.mustReset=true; audit('Student login reset',s.name,'SIM'); save(); confirmDialog('Login Reset','New password for '+s.name+' (SDMS '+s.sdms+'):\n\n'+np,()=>{},'Close',false); },'Reset',false); }
+function viewStudent(id){
+ const s=S.students.find(x=>x.id===id); const subj=[...new Set((s.grades||[]).map(g=>g.subject))];
+ showForm('Student Profile',`<div class="space-y-3 text-sm">
+   <div class="flex items-center space-x-3"><div class="w-14 h-14 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">${esc(s.name.charAt(0))}</div><div><div class="font-bold text-lg text-slate-900">${esc(s.name)}</div><div class="text-xs font-mono text-slate-500">SDMS ${esc(s.sdms)}</div></div></div>
+   <div class="grid grid-cols-2 gap-2">
+    <div class="bg-slate-50 rounded-xl p-2"><div class="text-xs text-slate-400">Class</div><div class="font-semibold">${esc(s.class||'—')}</div></div>
+    <div class="bg-slate-50 rounded-xl p-2"><div class="text-xs text-slate-400">Gender</div><div class="font-semibold">${esc(s.gender||'—')}</div></div>
+    <div class="bg-slate-50 rounded-xl p-2"><div class="text-xs text-slate-400">Wallet Balance</div><div class="font-semibold ${(s.wallet||0)<0?'text-rose-600':''}">${money(s.wallet||0)}</div></div>
+    <div class="bg-slate-50 rounded-xl p-2"><div class="text-xs text-slate-400">Guardian</div><div class="font-semibold">${esc(s.guardian||'—')}</div></div>
+   </div>
+   <div class="bg-slate-50 rounded-xl p-2"><div class="text-xs text-slate-400 mb-1">Recorded Subjects (${subj.length})</div><div class="text-xs">${subj.length?esc(subj.join(', ')):'No marks recorded yet.'}</div></div>
+   <button onclick="closeModal('app-modal');openReport('${s.id}')" class="w-full py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">View Report Card</button>
+  </div>`);
+}
+</script>
+<script>
+/* ===================== ACADEMICS & MARKS ===================== */
+function teacherSubjects(){ if(user.role==='Teacher'){ const u=S.users.find(x=>x.id===user.id); return (u&&u.subjects)||[]; } return S.subjects||[]; }
+function renderAcademics(){
+ const mine=teacherSubjects();
+ const isTeacher=user.role==='Teacher';
+ $('admin-view').innerHTML=pageHead('Academics & Marks',isTeacher?'You can record and view marks only for your assigned subjects.':'Record marks for any subject. Report cards list only subjects with recorded marks.',
+   btn('Record Mark','openMarkForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-pen-to-square'));
+ if(isTeacher&&mine.length===0){ $('admin-view').innerHTML+=card('<div class="text-center py-8"><i class="fa-solid fa-triangle-exclamation text-amber-500 text-3xl mb-3"></i><p class="text-slate-600">You have no subjects assigned yet. Ask the Headmaster to assign your subject(s).</p></div>','mt-4'); return; }
+ const allGrades=[]; S.students.forEach(s=>(s.grades||[]).forEach(g=>{ if(!isTeacher||mine.includes(g.subject)) allGrades.push(Object.assign({student:s.name,sid:s.id,cls:s.class},g)); }));
+ allGrades.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+ $('admin-view').innerHTML+=card(`<div class="mb-3 flex flex-wrap gap-2">${mine.map(s=>`<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-50 border border-brand-200 text-brand-800">${esc(s)}</span>`).join('')}</div>
+   <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Student</th><th class="py-2 pr-3">Class</th><th class="py-2 pr-3">Subject</th><th class="py-2 pr-3">Term</th><th class="py-2 pr-3">Mark</th><th class="py-2 pr-3">Grade</th><th class="py-2 pr-3">By</th><th class="py-2 text-right"></th></tr></thead><tbody>`
+   +(allGrades.length?allGrades.map(g=>`<tr class="border-b border-slate-100"><td class="py-2.5 pr-3 font-semibold">${esc(g.student)}</td><td class="py-2.5 pr-3">${esc(g.cls||'—')}</td><td class="py-2.5 pr-3">${esc(g.subject)}</td><td class="py-2.5 pr-3">${esc(g.term||'—')}</td><td class="py-2.5 pr-3 font-bold">${g.mark}</td><td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(g.mark)}">${letterGrade(g.mark)}</span></td><td class="py-2.5 pr-3 text-xs text-slate-500">${esc(g.by||'—')}</td><td class="py-2.5 text-right">${(!isTeacher||mine.includes(g.subject))?`<button onclick="deleteMark('${g.sid}','${g.id}')" class="text-rose-500 hover:text-rose-700 px-1.5"><i class="fa-solid fa-trash"></i></button>`:''}</td></tr>`).join(''):'<tr><td colspan="8" class="py-6 text-center text-slate-400">No marks recorded yet.</td></tr>')
+   +`</tbody></table></div>`,'mt-4');
+}
+function letterGrade(m){ m=Number(m); if(m>=80)return'A'; if(m>=70)return'B'; if(m>=60)return'C'; if(m>=50)return'D'; if(m>=40)return'E'; return'F'; }
+function gradeColor(m){ m=Number(m); if(m>=70)return'bg-emerald-100 text-emerald-700'; if(m>=50)return'bg-sky-100 text-sky-700'; if(m>=40)return'bg-amber-100 text-amber-700'; return'bg-rose-100 text-rose-700'; }
+function openMarkForm(){
+ const subs=teacherSubjects();
+ if(subs.length===0){toast('No subjects available to record.','warn');return;}
+ showForm('Record Mark',`<form onsubmit="saveMark(event)" class="space-y-4">
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Student</label><select id="mk-student" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option value="">Select student...</option>${S.students.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.class||'')}</option>`).join('')}</select></div>
+   <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Subject</label><select id="mk-subject" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${subs.map(s=>`<option>${esc(s)}</option>`).join('')}</select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Term</label><select id="mk-term" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option>Term 1</option><option>Term 2</option><option>Term 3</option></select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Mark (0-100)</label><input id="mk-mark" type="number" min="0" max="100" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Assessment</label><select id="mk-type" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option>Exam</option><option>Test</option><option>Assignment</option><option>Project</option></select></div>
+   </div>
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Save Mark</button></div></form>`);
+}
+function saveMark(e){
+ e.preventDefault();
+ const sid=$('mk-student').value, subject=$('mk-subject').value;
+ if(user.role==='Teacher'&&!teacherSubjects().includes(subject)){toast('You are not assigned to this subject.','error');return;}
+ const s=S.students.find(x=>x.id===sid); if(!s)return; if(!s.grades)s.grades=[];
+ s.grades.push({id:uid(),subject,term:$('mk-term').value,mark:Number($('mk-mark').value),type:$('mk-type').value,by:user.name,ts:now()});
+ audit('Mark recorded',subject+' '+$('mk-mark').value+' for '+s.name,'Academics'); save(); closeModal('app-modal'); renderAcademics(); toast('Mark recorded.','success');
+}
+function deleteMark(sid,gid){ const s=S.students.find(x=>x.id===sid); if(!s)return; const g=s.grades.find(x=>x.id===gid); confirmDialog('Delete Mark','Remove this mark?',()=>{ s.grades=s.grades.filter(x=>x.id!==gid); audit('Mark deleted',(g?g.subject:'')+' for '+s.name,'Academics'); save(); renderAcademics(); toast('Mark removed.','info'); }); }
+
+/* ===================== REPORT CARD (only recorded subjects) ===================== */
+let reportCtx=null;
+function openReport(id){
+ const s=S.students.find(x=>x.id===id); if(!s)return;
+ const grades=s.grades||[];
+ const bySub={}; grades.forEach(g=>{ (bySub[g.subject]=bySub[g.subject]||[]).push(g); });
+ const subjects=Object.keys(bySub).sort();
+ reportCtx={student:s,subjects,bySub};
+ let avg=0,cnt=0; const rows=subjects.map(sub=>{ const arr=bySub[sub]; const m=Math.round(arr.reduce((a,b)=>a+Number(b.mark),0)/arr.length); avg+=m;cnt++; return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium">${esc(sub)}</td><td class="py-2 pr-3 text-center">${arr.length}</td><td class="py-2 pr-3 text-center font-bold">${m}</td><td class="py-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(m)}">${letterGrade(m)}</span></td></tr>`; }).join('');
+ const overall=cnt?Math.round(avg/cnt):0;
+ $('report-content').innerHTML=`<div id="report-print">
+   <div class="flex items-center justify-between border-b-2 border-brand-600 pb-3 mb-4"><div><div class="text-lg font-extrabold text-slate-900">${esc(school.name)}</div><div class="text-xs text-slate-500">${esc(school.motto||'')} · Code ${esc(school.code)}</div></div><div class="w-12 h-12 bg-brand-600 text-white rounded-xl flex items-center justify-center"><i class="fa-solid fa-school"></i></div></div>
+   <h2 class="text-center font-bold text-slate-800 mb-3">STUDENT REPORT CARD</h2>
+   <div class="grid grid-cols-2 gap-2 text-sm mb-4"><div><b>Name:</b> ${esc(s.name)}</div><div><b>SDMS:</b> ${esc(s.sdms)}</div><div><b>Class:</b> ${esc(s.class||'—')}</div><div><b>Gender:</b> ${esc(s.gender||'—')}</div></div>
+   ${subjects.length?`<table class="w-full text-sm border border-slate-200"><thead><tr class="bg-slate-50 text-left text-xs uppercase text-slate-500"><th class="py-2 px-3">Subject</th><th class="py-2 px-3 text-center"># Marks</th><th class="py-2 px-3 text-center">Average</th><th class="py-2 px-3 text-center">Grade</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="bg-brand-50 font-bold"><td class="py-2 px-3">OVERALL</td><td></td><td class="py-2 px-3 text-center">${overall}</td><td class="py-2 px-3 text-center">${letterGrade(overall)}</td></tr></tfoot></table>
+    <p class="text-xs text-slate-400 mt-3">This report lists only subjects in which marks have been recorded. There are no fixed subject combinations.</p>`:'<div class="text-center py-10 text-slate-400">No marks recorded yet for this student.</div>'}
+  </div>`;
+ openModal('report-modal');
+}
+function printReport(){ const w=window.open('','_blank'); w.document.write('<html><head><title>Report Card</title><script src="https://cdn.tailwindcss.com"><\/script></head><body class="p-8">'+$('report-print').innerHTML+'<scr'+'ipt>setTimeout(()=>window.print(),500)<\/scr'+'ipt></body></html>'); w.document.close(); }
+function downloadReport(){ if(!reportCtx)return; const s=reportCtx.student; let csv='Subject,Term,Type,Mark,By\n'; reportCtx.subjects.forEach(sub=>reportCtx.bySub[sub].forEach(g=>{csv+=`"${sub}","${g.term||''}","${g.type||''}",${g.mark},"${g.by||''}"\n`;})); const b=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=(s.name+'_report.csv').replace(/\s+/g,'_'); a.click(); }
+</script>
+<script>
+/* ===================== FINANCES & WALLET (Bursar / Headmaster) ===================== */
+const FEE_TYPES=['Tuition','Uniform','Canteen','Transport','Services','Other'];
+function renderFinances(){
+ const allowed=can(user.role,'Headmaster','Bursar');
+ if(!allowed){$('admin-view').innerHTML=card('<p class="text-slate-500">Only the Bursar or Headmaster can manage finances.</p>');return;}
+ const txns=S.transactions||[];
+ const totalIn=txns.filter(t=>t.dir==='credit').reduce((a,b)=>a+b.amount,0);
+ const totalOut=txns.filter(t=>t.dir==='debit').reduce((a,b)=>a+b.amount,0);
+ const outstanding=S.students.filter(s=>(s.wallet||0)<0).reduce((a,s)=>a+Math.abs(s.wallet||0),0);
+ $('admin-view').innerHTML=pageHead('Finances & Wallet','Manage student wallets — fees, uniform, canteen, transport and services.',
+   btn('Post Transaction','openTxnForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-money-bill-transfer'))
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+    ${stat('Total Collected',money(totalIn),'fa-arrow-down','bg-emerald-100 text-emerald-700')}
+    ${stat('Total Charged',money(totalOut),'fa-arrow-up','bg-rose-100 text-rose-700')}
+    ${stat('Outstanding',money(outstanding),'fa-triangle-exclamation','bg-amber-100 text-amber-700')}
+    ${stat('Transactions',txns.length,'fa-receipt','bg-brand-100 text-brand-700')}</div>`
+  +card(`<h3 class="font-bold text-slate-800 mb-3">Student Wallets</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Student</th><th class="py-2 pr-3">Class</th><th class="py-2 pr-3">Balance</th><th class="py-2 text-right"></th></tr></thead><tbody>`
+   +S.students.map(s=>`<tr class="border-b border-slate-100"><td class="py-2.5 pr-3 font-semibold">${esc(s.name)}</td><td class="py-2.5 pr-3">${esc(s.class||'—')}</td><td class="py-2.5 pr-3 font-bold ${(s.wallet||0)<0?'text-rose-600':'text-emerald-700'}">${money(s.wallet||0)}</td><td class="py-2.5 text-right"><button onclick="openTxnForm('${s.id}')" class="text-brand-600 hover:text-brand-800 text-xs font-semibold"><i class="fa-solid fa-plus mr-1"></i>Post</button></td></tr>`).join('')
+   +`</tbody></table></div>`,'mt-4')
+  +card(`<h3 class="font-bold text-slate-800 mb-3">Recent Transactions</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Student</th><th class="py-2 pr-3">Type</th><th class="py-2 pr-3">Note</th><th class="py-2 pr-3 text-right">Amount</th></tr></thead><tbody>`
+   +(txns.slice().reverse().slice(0,30).map(t=>{const s=S.students.find(x=>x.id===t.sid);return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 text-xs text-slate-500">${fmtDate(t.ts)}</td><td class="py-2 pr-3">${esc(s?s.name:'—')}</td><td class="py-2 pr-3">${esc(t.type)}</td><td class="py-2 pr-3 text-xs text-slate-500">${esc(t.note||'')}</td><td class="py-2 pr-3 text-right font-bold ${t.dir==='credit'?'text-emerald-600':'text-rose-600'}">${t.dir==='credit'?'+':'-'}${money(t.amount)}</td></tr>`;}).join('')||'<tr><td colspan="5" class="py-6 text-center text-slate-400">No transactions yet.</td></tr>')
+   +`</tbody></table></div>`,'mt-4');
+}
+function openTxnForm(sid){
+ showForm('Post Transaction',`<form onsubmit="saveTxn(event)" class="space-y-4">
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Student</label><select id="tx-student" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${S.students.map(s=>`<option value="${s.id}" ${sid===s.id?'selected':''}>${esc(s.name)} — ${esc(s.class||'')} (${money(s.wallet||0)})</option>`).join('')}</select></div>
+   <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Direction</label><select id="tx-dir" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option value="credit">Payment In (Credit)</option><option value="debit">Charge (Debit)</option></select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Type</label><select id="tx-type" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${FEE_TYPES.map(f=>`<option>${f}</option>`).join('')}</select></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Amount</label><input id="tx-amount" type="number" min="0" step="0.01" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Note</label><input id="tx-note" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div>
+   </div>
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Post</button></div></form>`);
+}
+function saveTxn(e){
+ e.preventDefault();
+ const sid=$('tx-student').value, dir=$('tx-dir').value, amount=Number($('tx-amount').value), type=$('tx-type').value, note=$('tx-note').value.trim();
+ const s=S.students.find(x=>x.id===sid); if(!s)return;
+ if(!S.transactions)S.transactions=[];
+ S.transactions.push({id:uid(),sid,dir,amount,type,note,by:user.name,ts:now()});
+ s.wallet=(s.wallet||0)+(dir==='credit'?amount:-amount);
+ audit('Transaction posted',(dir==='credit'?'+':'-')+money(amount)+' '+type+' for '+s.name,'Finance'); save(); closeModal('app-modal'); renderFinances(); toast('Transaction posted.','success');
+}
+
+/* ===================== DISCIPLINE (DOD / Headmaster) ===================== */
+function renderDiscipline(){
+ const allowed=can(user.role,'Headmaster','DOD');
+ if(!allowed){$('admin-view').innerHTML=card('<p class="text-slate-500">Only the Director of Discipline or Headmaster can manage discipline.</p>');return;}
+ const recs=S.discipline||[];
+ $('admin-view').innerHTML=pageHead('Discipline','Log incidents, merits and sanctions.',
+   btn('Log Entry','openDiscForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-gavel'))
+  +`<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-4">${stat('Total Entries',recs.length,'fa-gavel','bg-brand-100 text-brand-700')}${stat('Merits',recs.filter(r=>r.kind==='Merit').length,'fa-star','bg-emerald-100 text-emerald-700')}${stat('Sanctions',recs.filter(r=>r.kind==='Sanction').length,'fa-ban','bg-rose-100 text-rose-700')}</div>`
+  +card(`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Student</th><th class="py-2 pr-3">Kind</th><th class="py-2 pr-3">Detail</th><th class="py-2 pr-3">By</th></tr></thead><tbody>`
+   +(recs.slice().reverse().map(r=>{const s=S.students.find(x=>x.id===r.sid);return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 text-xs text-slate-500">${fmtDate(r.ts)}</td><td class="py-2 pr-3 font-semibold">${esc(s?s.name:'—')}</td><td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${r.kind==='Merit'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}">${esc(r.kind)}</span></td><td class="py-2 pr-3">${esc(r.detail)}</td><td class="py-2 pr-3 text-xs text-slate-500">${esc(r.by)}</td></tr>`;}).join('')||'<tr><td colspan="5" class="py-6 text-center text-slate-400">No discipline entries.</td></tr>')
+   +`</tbody></table></div>`,'mt-4');
+}
+function openDiscForm(){
+ showForm('Log Discipline Entry',`<form onsubmit="saveDisc(event)" class="space-y-4">
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Student</label><select id="dc-student" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.class||'')}</option>`).join('')}</select></div>
+   <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Kind</label><select id="dc-kind" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option>Merit</option><option>Sanction</option><option>Note</option></select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Points</label><input id="dc-points" type="number" value="0" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div></div>
+   <div><label class="block text-xs font-semibold text-slate-600 mb-1">Detail</label><textarea id="dc-detail" rows="3" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></textarea></div>
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Save</button></div></form>`);
+}
+function saveDisc(e){ e.preventDefault(); if(!S.discipline)S.discipline=[]; const sid=$('dc-student').value; const s=S.students.find(x=>x.id===sid); S.discipline.push({id:uid(),sid,kind:$('dc-kind').value,points:Number($('dc-points').value),detail:$('dc-detail').value.trim(),by:user.name,ts:now()}); audit('Discipline entry',$('dc-kind').value+' for '+(s?s.name:''),'Discipline'); save(); closeModal('app-modal'); renderDiscipline(); toast('Entry logged.','success'); }
+
+/* ===================== ATTENDANCE ===================== */
+function renderAttendance(){
+ const allowed=can(user.role,'Headmaster','DOS','DOD','Teacher');
+ if(!allowed){$('admin-view').innerHTML=card('<p class="text-slate-500">Not permitted.</p>');return;}
+ const today=new Date().toISOString().slice(0,10);
+ $('admin-view').innerHTML=pageHead('Attendance','Mark daily attendance by class.','')
+  +card(`<div class="flex flex-wrap gap-3 mb-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Class</label><select id="att-class" onchange="loadAttendance()" class="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${CLASSES.map(c=>`<option>${c}</option>`).join('')}</select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Date</label><input id="att-date" type="date" value="${today}" onchange="loadAttendance()" class="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div class="flex items-end">${btn('Save Attendance','saveAttendance()','bg-brand-600 hover:bg-brand-700 text-white','fa-floppy-disk')}</div></div><div id="att-list"></div>`,'mt-4');
+ loadAttendance();
+}
+function loadAttendance(){
+ const cls=$('att-class').value, date=$('att-date').value;
+ const roster=S.students.filter(s=>s.class===cls);
+ const key=cls+'|'+date; const rec=(S.attendance||{})[key]||{};
+ $('att-list').innerHTML=roster.length?`<div class="space-y-1.5">`+roster.map(s=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2"><span class="text-sm font-medium">${esc(s.name)}</span><div class="flex space-x-1">${['Present','Absent','Late'].map(st=>`<label class="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${rec[s.id]===st?(st==='Present'?'bg-emerald-600 text-white':st==='Absent'?'bg-rose-600 text-white':'bg-amber-500 text-white'):'bg-white border border-slate-200 text-slate-600'}"><input type="radio" class="hidden" name="att-${s.id}" value="${st}" ${rec[s.id]===st?'checked':''} onchange="loadAttendanceMark()">${st}</label>`).join('')}</div></div>`).join('')+`</div>`:'<p class="text-slate-400 text-sm py-4 text-center">No students in this class.</p>';
+}
+function loadAttendanceMark(){ /* visual refresh handled on save */ }
+function saveAttendance(){
+ const cls=$('att-class').value, date=$('att-date').value, key=cls+'|'+date;
+ const roster=S.students.filter(s=>s.class===cls); const rec={};
+ roster.forEach(s=>{ const sel=document.querySelector(`input[name="att-${s.id}"]:checked`); if(sel)rec[s.id]=sel.value; });
+ if(!S.attendance)S.attendance={}; S.attendance[key]=rec;
+ audit('Attendance saved',cls+' '+date,'Attendance'); save(); loadAttendance(); toast('Attendance saved.','success');
+}
+</script>
+<script>
+/* ===================== LIBRARY (Librarian / Headmaster) ===================== */
+function renderLibrary(){
+ const canManage=can(user.role,'Headmaster','Librarian');
+ const books=S.library&&S.library.books?S.library.books:[];
+ const loans=S.library&&S.library.loans?S.library.loans:[];
+ $('admin-view').innerHTML=pageHead('Library','Catalogue, lending and returns.',
+   (canManage?btn('Add Book','openBookForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-book-medical'):''))
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">${stat('Titles',books.length,'fa-book','bg-brand-100 text-brand-700')}${stat('Total Copies',books.reduce((a,b)=>a+(b.copies||0),0),'fa-layer-group','bg-sky-100 text-sky-700')}${stat('On Loan',loans.filter(l=>!l.returned).length,'fa-hand-holding','bg-amber-100 text-amber-700')}${stat('Overdue',loans.filter(l=>!l.returned&&l.due&&l.due<new Date().toISOString().slice(0,10)).length,'fa-clock','bg-rose-100 text-rose-700')}</div>`
+  +card(`<div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-800">Catalogue</h3></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Title</th><th class="py-2 pr-3">Author</th><th class="py-2 pr-3">Category</th><th class="py-2 pr-3">Available</th><th class="py-2 text-right"></th></tr></thead><tbody>`
+   +(books.length?books.map(b=>{const onloan=loans.filter(l=>l.bookId===b.id&&!l.returned).length;const avail=(b.copies||0)-onloan;return `<tr class="border-b border-slate-100"><td class="py-2.5 pr-3 font-semibold">${esc(b.title)}</td><td class="py-2.5 pr-3">${esc(b.author||'—')}</td><td class="py-2.5 pr-3">${esc(b.category||'—')}</td><td class="py-2.5 pr-3"><span class="${avail>0?'text-emerald-700':'text-rose-600'} font-bold">${avail}</span> / ${b.copies||0}</td><td class="py-2.5 text-right whitespace-nowrap">${canManage?`<button onclick="lendBook('${b.id}')" ${avail<=0?'disabled':''} class="text-brand-600 hover:text-brand-800 px-1.5 ${avail<=0?'opacity-30':''}" title="Lend"><i class="fa-solid fa-right-from-bracket"></i></button><button onclick="delBook('${b.id}')" class="text-rose-500 hover:text-rose-700 px-1.5" title="Delete"><i class="fa-solid fa-trash"></i></button>`:''}</td></tr>`;}).join(''):'<tr><td colspan="5" class="py-6 text-center text-slate-400">No books catalogued.</td></tr>')
+   +`</tbody></table></div>`,'mt-4')
+  +card(`<h3 class="font-bold text-slate-800 mb-3">Active Loans</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Book</th><th class="py-2 pr-3">Student</th><th class="py-2 pr-3">Issued</th><th class="py-2 pr-3">Due</th><th class="py-2 text-right"></th></tr></thead><tbody>`
+   +(loans.filter(l=>!l.returned).map(l=>{const b=books.find(x=>x.id===l.bookId);const s=S.students.find(x=>x.id===l.sid);const over=l.due&&l.due<new Date().toISOString().slice(0,10);return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-semibold">${esc(b?b.title:'—')}</td><td class="py-2 pr-3">${esc(s?s.name:'—')}</td><td class="py-2 pr-3 text-xs">${esc(l.issued||'')}</td><td class="py-2 pr-3 text-xs ${over?'text-rose-600 font-bold':''}">${esc(l.due||'')}</td><td class="py-2 text-right">${canManage?`<button onclick="returnBook('${l.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-rotate-left mr-1"></i>Return</button>`:''}</td></tr>`;}).join('')||'<tr><td colspan="5" class="py-6 text-center text-slate-400">No active loans.</td></tr>')
+   +`</tbody></table></div>`,'mt-4');
+}
+function openBookForm(){
+ showForm('Add Book',`<form onsubmit="saveBook(event)" class="space-y-4"><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Title</label><input id="bk-title" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Author</label><input id="bk-author" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Category</label><input id="bk-cat" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Copies</label><input id="bk-copies" type="number" min="1" value="1" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Add</button></div></form>`);
+}
+function saveBook(e){ e.preventDefault(); if(!S.library)S.library={books:[],loans:[]}; S.library.books.push({id:uid(),title:$('bk-title').value.trim(),author:$('bk-author').value.trim(),category:$('bk-cat').value.trim(),copies:Number($('bk-copies').value)}); audit('Book added',$('bk-title').value,'Library'); save(); closeModal('app-modal'); renderLibrary(); toast('Book added.','success'); }
+function delBook(id){ confirmDialog('Delete Book','Remove this title from the catalogue?',()=>{ S.library.books=S.library.books.filter(b=>b.id!==id); audit('Book removed','','Library'); save(); renderLibrary(); toast('Book removed.','info'); }); }
+function lendBook(bookId){
+ showForm('Lend Book',`<form onsubmit="saveLoan(event,'${bookId}')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Student</label><select id="ln-student" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${S.students.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.class||'')}</option>`).join('')}</select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Due Date</label><input id="ln-due" type="date" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Lend</button></div></form>`);
+}
+function saveLoan(e,bookId){ e.preventDefault(); if(!S.library.loans)S.library.loans=[]; S.library.loans.push({id:uid(),bookId,sid:$('ln-student').value,issued:new Date().toISOString().slice(0,10),due:$('ln-due').value,returned:false}); audit('Book lent','','Library'); save(); closeModal('app-modal'); renderLibrary(); toast('Book issued.','success'); }
+function returnBook(id){ const l=S.library.loans.find(x=>x.id===id); if(l){l.returned=true;l.returnedAt=now();} audit('Book returned','','Library'); save(); renderLibrary(); toast('Book returned.','success'); }
+
+/* ===================== AUDIT LOG ===================== */
+function renderAudit(){
+ if(user.role!=='Headmaster'){$('admin-view').innerHTML=card('<p class="text-slate-500">Only the Headmaster can view the audit log.</p>');return;}
+ const logs=(S.auditLogs||[]).slice();
+ $('admin-view').innerHTML=pageHead('Audit Log','Immutable record of key actions across the system.',
+   btn('Export CSV','exportAudit()','bg-slate-100 hover:bg-slate-200 text-slate-700','fa-download'))
+  +card(`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Time</th><th class="py-2 pr-3">Actor</th><th class="py-2 pr-3">Action</th><th class="py-2 pr-3">Module</th><th class="py-2 pr-3">Detail</th></tr></thead><tbody>`
+   +(logs.length?logs.slice(0,200).map(l=>`<tr class="border-b border-slate-100"><td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${fmtDate(l.ts)}</td><td class="py-2 pr-3">${esc(l.actor||'—')}</td><td class="py-2 pr-3 font-medium">${esc(l.action)}</td><td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">${esc(l.category||'—')}</span></td><td class="py-2 pr-3 text-xs text-slate-500">${esc(l.detail||'')}</td></tr>`).join(''):'<tr><td colspan="5" class="py-6 text-center text-slate-400">No audit entries yet.</td></tr>')
+   +`</tbody></table></div>`,'mt-4');
+}
+function exportAudit(){ let csv='Time,Actor,Action,Module,Detail\n'; (S.auditLogs||[]).forEach(l=>{csv+=`"${fmtDate(l.ts)}","${l.actor||''}","${l.action||''}","${l.category||''}","${(l.detail||'').replace(/"/g,'""')}"\n`;}); const b=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='audit_log.csv'; a.click(); }
+</script>
+<script>
+/* ===================== DASHBOARD ===================== */
+function renderDashboard(){
+ const txns=S.transactions||[];
+ const collected=txns.filter(t=>t.dir==='credit').reduce((a,b)=>a+b.amount,0);
+ const outstanding=S.students.filter(s=>(s.wallet||0)<0).reduce((a,s)=>a+Math.abs(s.wallet||0),0);
+ const marks=S.students.reduce((a,s)=>a+((s.grades||[]).length),0);
+ const onLoan=(S.library&&S.library.loans?S.library.loans:[]).filter(l=>!l.returned).length;
+ $('admin-view').innerHTML=pageHead('Dashboard','Welcome back, '+user.name+'. Here is a snapshot of '+school.name+'.','')
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+    ${stat('Students',S.students.length,'fa-user-graduate','bg-brand-100 text-brand-700')}
+    ${stat('Staff',S.users.length,'fa-users','bg-sky-100 text-sky-700')}
+    ${stat('Fees Collected',money(collected),'fa-sack-dollar','bg-emerald-100 text-emerald-700')}
+    ${stat('Outstanding',money(outstanding),'fa-triangle-exclamation','bg-amber-100 text-amber-700')}
+    ${stat('Subjects',(S.subjects||[]).length,'fa-book-open','bg-indigo-100 text-indigo-700')}
+    ${stat('Marks Recorded',marks,'fa-pen-to-square','bg-purple-100 text-purple-700')}
+    ${stat('Books on Loan',onLoan,'fa-book','bg-rose-100 text-rose-700')}
+    ${stat('Notices',(S.notices||[]).length,'fa-bullhorn','bg-teal-100 text-teal-700')}</div>`
+  +`<div class="grid lg:grid-cols-2 gap-4 mt-4">`
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Recent Activity</h3><div class="space-y-2">`+((S.auditLogs||[]).slice(0,6).map(l=>`<div class="flex items-start space-x-3 text-sm"><div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-clock-rotate-left text-xs"></i></div><div><div class="font-medium text-slate-700">${esc(l.action)}</div><div class="text-xs text-slate-400">${esc(l.actor||'')} · ${fmtDate(l.ts)}</div></div></div>`).join('')||'<p class="text-sm text-slate-400">No activity yet.</p>')+`</div>`)
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Latest Notices</h3><div class="space-y-2">`+((S.notices||[]).slice().reverse().slice(0,5).map(n=>`<div class="border-l-4 border-brand-400 pl-3 py-1"><div class="font-semibold text-sm text-slate-800">${esc(n.title)}</div><div class="text-xs text-slate-500">${esc(n.body||'').slice(0,80)}</div></div>`).join('')||'<p class="text-sm text-slate-400">No notices.</p>')+`</div>`)
+  +`</div>`;
+}
+
+/* ===================== STUDENT PORTAL ===================== */
+function renderStudentPortal(){
+ const s=S.students.find(x=>x.id===user.studentId); if(!s){$('admin-view').innerHTML=card('<p class="text-slate-500">Student record not found.</p>');return;}
+ const grades=s.grades||[]; const bySub={}; grades.forEach(g=>(bySub[g.subject]=bySub[g.subject]||[]).push(g));
+ const subjects=Object.keys(bySub).sort();
+ let avg=0; subjects.forEach(sub=>{const arr=bySub[sub];avg+=Math.round(arr.reduce((a,b)=>a+Number(b.mark),0)/arr.length);}); const overall=subjects.length?Math.round(avg/subjects.length):0;
+ $('admin-view').innerHTML=pageHead('My Portal','Hello '+s.name+' · SDMS '+s.sdms,'')
+  +`<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">${stat('Wallet',money(s.wallet||0),'fa-wallet',(s.wallet||0)<0?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700')}${stat('Subjects',subjects.length,'fa-book','bg-brand-100 text-brand-700')}${stat('Overall',overall+'% ('+letterGrade(overall)+')','fa-chart-line','bg-sky-100 text-sky-700')}${stat('Class',s.class||'—','fa-users','bg-indigo-100 text-indigo-700')}</div>`
+  +card(`<div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-800">My Results</h3><button onclick="openReport('${s.id}')" class="text-brand-600 hover:text-brand-800 text-sm font-semibold"><i class="fa-solid fa-file-lines mr-1"></i>Full Report</button></div>`
+   +(subjects.length?`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Subject</th><th class="py-2 pr-3 text-center">Average</th><th class="py-2 pr-3 text-center">Grade</th></tr></thead><tbody>`+subjects.map(sub=>{const arr=bySub[sub];const m=Math.round(arr.reduce((a,b)=>a+Number(b.mark),0)/arr.length);return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium">${esc(sub)}</td><td class="py-2 pr-3 text-center font-bold">${m}</td><td class="py-2 pr-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(m)}">${letterGrade(m)}</span></td></tr>`;}).join('')+`</tbody></table></div>`:'<p class="text-slate-400 text-sm py-4 text-center">No results published yet.</p>')
+   ,'mt-4')
+  +card(`<h3 class="font-bold text-slate-800 mb-3">My Wallet Statement</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Type</th><th class="py-2 pr-3">Note</th><th class="py-2 pr-3 text-right">Amount</th></tr></thead><tbody>`+((S.transactions||[]).filter(t=>t.sid===s.id).slice().reverse().map(t=>`<tr class="border-b border-slate-100"><td class="py-2 pr-3 text-xs text-slate-500">${fmtDate(t.ts)}</td><td class="py-2 pr-3">${esc(t.type)}</td><td class="py-2 pr-3 text-xs text-slate-500">${esc(t.note||'')}</td><td class="py-2 pr-3 text-right font-bold ${t.dir==='credit'?'text-emerald-600':'text-rose-600'}">${t.dir==='credit'?'+':'-'}${money(t.amount)}</td></tr>`).join('')||'<tr><td colspan="4" class="py-6 text-center text-slate-400">No transactions.</td></tr>')+`</tbody></table></div>`,'mt-4');
+}
+</script>
+<script>
+/* ===================== NOTICES / NOTIFICATIONS ===================== */
+function renderNotices(){
+ const canPost=can(user.role,'Headmaster','DOS','DOD','Bursar','Librarian','Teacher');
+ const notices=S.notices||[];
+ $('admin-view').innerHTML=pageHead('Notices & Notifications','School-wide announcements.',
+   (canPost?btn('Post Notice','openNoticeForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-bullhorn'):''))
+  +`<div class="space-y-3 mt-4">`+(notices.length?notices.slice().reverse().map(n=>card(`<div class="flex items-start justify-between"><div><div class="flex items-center space-x-2"><h3 class="font-bold text-slate-800">${esc(n.title)}</h3><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${n.audience==='All'?'bg-brand-100 text-brand-700':'bg-slate-100 text-slate-600'}">${esc(n.audience||'All')}</span></div><p class="text-sm text-slate-600 mt-1 whitespace-pre-wrap">${esc(n.body||'')}</p><div class="text-xs text-slate-400 mt-2">${esc(n.by||'')} · ${fmtDate(n.ts)}</div></div>${canPost?`<button onclick="delNotice('${n.id}')" class="text-rose-500 hover:text-rose-700 px-1.5"><i class="fa-solid fa-trash"></i></button>`:''}</div>`)).join(''):card('<p class="text-slate-400 text-center py-6">No notices posted.</p>'))+`</div>`;
+}
+function openNoticeForm(){
+ showForm('Post Notice',`<form onsubmit="saveNotice(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Title</label><input id="nt-title" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Audience</label><select id="nt-aud" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option>All</option><option>Staff</option><option>Students</option><option>Parents</option></select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Message</label><textarea id="nt-body" rows="4" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></textarea></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Post</button></div></form>`);
+}
+function saveNotice(e){ e.preventDefault(); if(!S.notices)S.notices=[]; S.notices.push({id:uid(),title:$('nt-title').value.trim(),audience:$('nt-aud').value,body:$('nt-body').value.trim(),by:user.name,ts:now()}); audit('Notice posted',$('nt-title').value,'Notice'); save(); closeModal('app-modal'); renderNotices(); toast('Notice posted.','success'); }
+function delNotice(id){ confirmDialog('Delete Notice','Remove this notice?',()=>{ S.notices=S.notices.filter(n=>n.id!==id); audit('Notice removed','','Notice'); save(); renderNotices(); toast('Notice removed.','info'); }); }
+
+/* ===================== TIMETABLE ===================== */
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const PERIODS=['08:00','09:00','10:00','11:00','12:00','14:00','15:00'];
+function renderTimetable(){
+ const canEdit=can(user.role,'Headmaster','DOS');
+ $('admin-view').innerHTML=pageHead('Timetable','Weekly class schedule.','')
+  +card(`<div class="flex flex-wrap gap-3 mb-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Class</label><select id="tt-class" onchange="loadTimetable()" class="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">${CLASSES.map(c=>`<option>${c}</option>`).join('')}</select></div></div><div id="tt-grid" class="overflow-x-auto"></div>`,'mt-4');
+ loadTimetable();
+}
+function loadTimetable(){
+ const cls=$('tt-class').value; const tt=(S.timetable||{})[cls]||{};
+ const canEdit=can(user.role,'Headmaster','DOS');
+ const subjects=S.subjects||[];
+ let html=`<table class="w-full text-xs border border-slate-200"><thead><tr class="bg-slate-50"><th class="py-2 px-2 border border-slate-200">Time</th>`+DAYS.map(d=>`<th class="py-2 px-2 border border-slate-200">${d}</th>`).join('')+`</tr></thead><tbody>`;
+ PERIODS.forEach(p=>{ html+=`<tr><td class="py-2 px-2 border border-slate-200 font-semibold bg-slate-50">${p}</td>`; DAYS.forEach(d=>{ const key=d+'|'+p; const val=tt[key]||''; html+=`<td class="py-1 px-1 border border-slate-200">${canEdit?`<select onchange="setTT('${cls}','${key}',this.value)" class="w-full text-xs bg-transparent"><option value="">—</option>${subjects.map(s=>`<option ${val===s?'selected':''}>${esc(s)}</option>`).join('')}</select>`:`<span>${esc(val||'—')}</span>`}</td>`; }); html+=`</tr>`; });
+ html+=`</tbody></table>`;
+ $('tt-grid').innerHTML=html;
+}
+function setTT(cls,key,val){ if(!S.timetable)S.timetable={}; if(!S.timetable[cls])S.timetable[cls]={}; if(val)S.timetable[cls][key]=val; else delete S.timetable[cls][key]; save(); }
+</script>
+<script>
+/* ===================== E-LEARNING (resources + quizzes) ===================== */
+function renderELearning(){
+ const canManage=can(user.role,'Headmaster','DOS','Teacher');
+ const res=S.elearning&&S.elearning.resources?S.elearning.resources:[];
+ const quizzes=S.elearning&&S.elearning.quizzes?S.elearning.quizzes:[];
+ $('admin-view').innerHTML=pageHead('E-Learning','Share resources and build quizzes for students.',
+   (canManage?btn('Add Resource','openResForm()','bg-slate-100 hover:bg-slate-200 text-slate-700','fa-link')+btn('Create Quiz','openQuizForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-clipboard-question'):''))
+  +`<div class="grid lg:grid-cols-2 gap-4 mt-4">`
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Learning Resources</h3><div class="space-y-2">`+(res.length?res.slice().reverse().map(r=>`<div class="flex items-start justify-between bg-slate-50 rounded-xl p-3"><div><div class="font-semibold text-sm text-slate-800">${esc(r.title)}</div><div class="text-xs text-slate-500">${esc(r.subject||'')} · ${esc(r.type||'Link')}</div><a href="${esc(r.url)}" target="_blank" rel="noopener" class="text-xs text-brand-600 hover:underline break-all">${esc(r.url)}</a></div>${canManage?`<button onclick="delRes('${r.id}')" class="text-rose-500 hover:text-rose-700 px-1.5"><i class="fa-solid fa-trash"></i></button>`:''}</div>`).join(''):'<p class="text-sm text-slate-400">No resources yet.</p>')+`</div>`)
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Quizzes</h3><div class="space-y-2">`+(quizzes.length?quizzes.slice().reverse().map(q=>`<div class="flex items-start justify-between bg-slate-50 rounded-xl p-3"><div><div class="font-semibold text-sm text-slate-800">${esc(q.title)}</div><div class="text-xs text-slate-500">${esc(q.subject||'')} · ${(q.questions||[]).length} questions</div></div><div class="flex items-center space-x-1"><button onclick="takeQuiz('${q.id}')" class="text-brand-600 hover:text-brand-800 px-1.5" title="Preview"><i class="fa-solid fa-play"></i></button>${canManage?`<button onclick="delQuiz('${q.id}')" class="text-rose-500 hover:text-rose-700 px-1.5"><i class="fa-solid fa-trash"></i></button>`:''}</div></div>`).join(''):'<p class="text-sm text-slate-400">No quizzes yet.</p>')+`</div>`)
+  +`</div>`;
+}
+function openResForm(){
+ const subs=S.subjects||[];
+ showForm('Add Resource',`<form onsubmit="saveRes(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Title</label><input id="rs-title" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Subject</label><select id="rs-subject" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option value="">General</option>${subs.map(s=>`<option>${esc(s)}</option>`).join('')}</select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Type</label><select id="rs-type" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option>Link</option><option>Video</option><option>Document</option></select></div></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">URL</label><input id="rs-url" type="url" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm" placeholder="https://..."></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Add</button></div></form>`);
+}
+function saveRes(e){ e.preventDefault(); if(!S.elearning)S.elearning={resources:[],quizzes:[]}; if(!S.elearning.resources)S.elearning.resources=[]; S.elearning.resources.push({id:uid(),title:$('rs-title').value.trim(),subject:$('rs-subject').value,type:$('rs-type').value,url:$('rs-url').value.trim(),by:user.name,ts:now()}); audit('Resource added',$('rs-title').value,'E-Learning'); save(); closeModal('app-modal'); renderELearning(); toast('Resource added.','success'); }
+function delRes(id){ confirmDialog('Delete Resource','Remove this resource?',()=>{ S.elearning.resources=S.elearning.resources.filter(r=>r.id!==id); save(); renderELearning(); toast('Removed.','info'); }); }
+let quizDraft=[];
+function openQuizForm(){
+ quizDraft=[]; const subs=S.subjects||[];
+ showForm('Create Quiz',`<form onsubmit="saveQuiz(event)" class="space-y-4"><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-600 mb-1">Quiz Title</label><input id="qz-title" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Subject</label><select id="qz-subject" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option value="">General</option>${subs.map(s=>`<option>${esc(s)}</option>`).join('')}</select></div></div>
+   <div class="border border-slate-200 rounded-xl p-3 space-y-2"><div class="text-xs font-semibold text-slate-600">Add Question</div><input id="q-text" placeholder="Question" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"><div class="grid grid-cols-2 gap-2"><input id="q-a" placeholder="Option A" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"><input id="q-b" placeholder="Option B" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"><input id="q-c" placeholder="Option C" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"><input id="q-d" placeholder="Option D" class="px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"></div><div class="flex items-center space-x-2"><label class="text-xs font-semibold text-slate-600">Correct</label><select id="q-correct" class="px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><button type="button" onclick="addQ()" class="ml-auto px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg">Add Question</button></div></div>
+   <div id="qz-list" class="space-y-1 text-sm"></div>
+   <div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Save Quiz</button></div></form>`);
+}
+function addQ(){ const text=$('q-text').value.trim(); if(!text){toast('Enter a question.','warn');return;} const opts=[$('q-a').value.trim(),$('q-b').value.trim(),$('q-c').value.trim(),$('q-d').value.trim()].filter(Boolean); if(opts.length<2){toast('Add at least two options.','warn');return;} quizDraft.push({text,options:opts,correct:Number($('q-correct').value)}); ['q-text','q-a','q-b','q-c','q-d'].forEach(i=>$(i).value=''); $('qz-list').innerHTML=quizDraft.map((q,i)=>`<div class="bg-slate-50 rounded-lg px-3 py-2 flex items-center justify-between"><span>${i+1}. ${esc(q.text)}</span><button type="button" onclick="quizDraft.splice(${i},1);document.querySelector('#qz-list').innerHTML='';" class="text-rose-500 text-xs">remove</button></div>`).join(''); }
+function saveQuiz(e){ e.preventDefault(); if(quizDraft.length===0){toast('Add at least one question.','warn');return;} if(!S.elearning)S.elearning={resources:[],quizzes:[]}; if(!S.elearning.quizzes)S.elearning.quizzes=[]; S.elearning.quizzes.push({id:uid(),title:$('qz-title').value.trim(),subject:$('qz-subject').value,questions:quizDraft.slice(),by:user.name,ts:now()}); audit('Quiz created',$('qz-title').value,'E-Learning'); save(); closeModal('app-modal'); renderELearning(); toast('Quiz saved.','success'); }
+function delQuiz(id){ confirmDialog('Delete Quiz','Remove this quiz?',()=>{ S.elearning.quizzes=S.elearning.quizzes.filter(q=>q.id!==id); save(); renderELearning(); toast('Removed.','info'); }); }
+</script>
+<script>
+/* ===================== PERMISSIONS (Headmaster configures module access) ===================== */
+function renderPermissions(){
+ if(user.role!=='Headmaster'){$('admin-view').innerHTML=card('<p class="text-slate-500">Only the Headmaster can configure permissions.</p>');return;}
+ const modules=['dashboard','accounts','subjects','students','academics','finances','discipline','attendance','library','notices','timetable','elearning','messages','audit'];
+ const roles=ROLES.filter(r=>r!=='Headmaster'&&r!=='Student'&&r!=='Parent');
+ $('admin-view').innerHTML=pageHead('Permissions','Fine-tune which modules each staff role can open. The Headmaster always has full access.','')
+  +card(`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Module</th>${roles.map(r=>`<th class="py-2 px-2 text-center">${esc(BADGES[r]||r)}</th>`).join('')}</tr></thead><tbody>`
+   +modules.map(m=>`<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium capitalize">${m}</td>${roles.map(r=>{const on=hasPerm(r,m);return `<td class="py-2 px-2 text-center"><input type="checkbox" ${on?'checked':''} onchange="togglePerm('${r}','${m}',this.checked)" class="rounded text-brand-600"></td>`;}).join('')}</tr>`).join('')
+   +`</tbody></table></div>`,'mt-4');
+}
+function hasPerm(role,module){ const p=(S.permissions||{})[role]; if(!p)return DEFAULT_PERMS[role]?DEFAULT_PERMS[role].includes(module):false; return p.includes(module); }
+function togglePerm(role,module,on){ if(!S.permissions)S.permissions={}; if(!S.permissions[role])S.permissions[role]=(DEFAULT_PERMS[role]||[]).slice(); const set=new Set(S.permissions[role]); if(on)set.add(module);else set.delete(module); S.permissions[role]=Array.from(set); audit('Permission changed',role+' '+(on?'granted':'revoked')+' '+module,'Permissions'); save(); }
+
+/* ===================== MESSAGES (internal) ===================== */
+function renderMessages(){
+ const msgs=(S.messages||[]).filter(m=>m.to===user.id||m.from===user.id||m.to==='all');
+ $('admin-view').innerHTML=pageHead('Messages','Internal direct messages.',
+   btn('New Message','openMsgForm()','bg-brand-600 hover:bg-brand-700 text-white','fa-paper-plane'))
+  +`<div class="space-y-2 mt-4">`+(msgs.length?msgs.slice().reverse().map(m=>{const fromU=allPeople().find(p=>p.id===m.from);const toU=m.to==='all'?{name:'Everyone'}:allPeople().find(p=>p.id===m.to);return card(`<div class="flex items-start justify-between"><div><div class="text-xs text-slate-400">${esc(fromU?fromU.name:'?')} → ${esc(toU?toU.name:'?')} · ${fmtDate(m.ts)}</div><div class="text-sm text-slate-700 mt-1 whitespace-pre-wrap">${esc(m.body)}</div></div></div>`);}).join(''):card('<p class="text-slate-400 text-center py-6">No messages.</p>'))+`</div>`;
+}
+function allPeople(){ return S.users.map(u=>({id:u.id,name:u.name+' ('+u.role+')'})).concat(S.students.map(s=>({id:'stu-'+s.id,name:s.name+' (Student)'}))); }
+function openMsgForm(){
+ const people=allPeople().filter(p=>p.id!==user.id);
+ showForm('New Message',`<form onsubmit="saveMsg(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-600 mb-1">To</label><select id="mg-to" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"><option value="all">Everyone</option>${people.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div><div><label class="block text-xs font-semibold text-slate-600 mb-1">Message</label><textarea id="mg-body" rows="4" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></textarea></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Cancel</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Send</button></div></form>`);
+}
+function saveMsg(e){ e.preventDefault(); if(!S.messages)S.messages=[]; S.messages.push({id:uid(),from:user.id,to:$('mg-to').value,body:$('mg-body').value.trim(),ts:now()}); audit('Message sent','','Messages'); save(); closeModal('app-modal'); renderMessages(); toast('Message sent.','success'); }
+</script>
+<script>
+/* ===================== STUDENT: QUIZZES & RESOURCES ===================== */
+function renderStudentLearning(){
+ const res=S.elearning&&S.elearning.resources?S.elearning.resources:[];
+ const quizzes=S.elearning&&S.elearning.quizzes?S.elearning.quizzes:[];
+ $('admin-view').innerHTML=pageHead('Learning','Resources and quizzes shared by your teachers.','')
+  +`<div class="grid lg:grid-cols-2 gap-4 mt-4">`
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Resources</h3><div class="space-y-2">`+(res.length?res.slice().reverse().map(r=>`<div class="bg-slate-50 rounded-xl p-3"><div class="font-semibold text-sm text-slate-800">${esc(r.title)}</div><div class="text-xs text-slate-500">${esc(r.subject||'')} · ${esc(r.type||'Link')}</div><a href="${esc(r.url)}" target="_blank" rel="noopener" class="text-xs text-brand-600 hover:underline break-all">Open</a></div>`).join(''):'<p class="text-sm text-slate-400">No resources yet.</p>')+`</div>`)
+   +card(`<h3 class="font-bold text-slate-800 mb-3">Quizzes</h3><div class="space-y-2">`+(quizzes.length?quizzes.slice().reverse().map(q=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl p-3"><div><div class="font-semibold text-sm text-slate-800">${esc(q.title)}</div><div class="text-xs text-slate-500">${esc(q.subject||'')} · ${(q.questions||[]).length} questions</div></div><button onclick="takeQuiz('${q.id}')" class="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg">Take</button></div>`).join(''):'<p class="text-sm text-slate-400">No quizzes yet.</p>')+`</div>`)
+  +`</div>`;
+}
+let quizCtx=null;
+function takeQuiz(id){
+ const q=(S.elearning&&S.elearning.quizzes?S.elearning.quizzes:[]).find(x=>x.id===id); if(!q)return;
+ quizCtx={quiz:q,answers:{}};
+ showForm(q.title,`<form onsubmit="submitQuiz(event)" class="space-y-4">${(q.questions||[]).map((qq,i)=>`<div class="border border-slate-200 rounded-xl p-3"><div class="font-semibold text-sm text-slate-800 mb-2">${i+1}. ${esc(qq.text)}</div><div class="space-y-1">${qq.options.map((o,oi)=>`<label class="flex items-center space-x-2 text-sm px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"><input type="radio" name="qq-${i}" value="${oi}" required class="text-brand-600"> <span>${esc(o)}</span></label>`).join('')}</div></div>`).join('')}<div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal('app-modal')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl">Close</button><button class="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl">Submit</button></div></form>`);
+}
+function submitQuiz(e){
+ e.preventDefault(); const q=quizCtx.quiz; let score=0;
+ q.questions.forEach((qq,i)=>{ const sel=document.querySelector(`input[name="qq-${i}"]:checked`); if(sel&&Number(sel.value)===qq.correct)score++; });
+ const pct=Math.round(score/q.questions.length*100);
+ if(user.role==='Student'){ if(!S.quizResults)S.quizResults=[]; S.quizResults.push({id:uid(),quizId:q.id,sid:user.studentId,score,total:q.questions.length,pct,ts:now()}); save(); }
+ closeModal('app-modal');
+ confirmDialog('Quiz Result','You scored '+score+' / '+q.questions.length+' ('+pct+'%).',()=>{},'Done',false);
+}
+
+/* ===================== PARENT PORTAL ===================== */
+function renderParentPortal(){
+ const u=S.users.find(x=>x.id===user.id); const kids=(u&&u.children?u.children:[]).map(id=>S.students.find(s=>s.id===id)).filter(Boolean);
+ $('admin-view').innerHTML=pageHead('Parent Portal','Monitoring '+(kids.length||0)+' linked '+(kids.length===1?'child':'children')+'.','');
+ if(kids.length===0){ $('admin-view').innerHTML+=card('<div class="text-center py-8"><i class="fa-solid fa-child text-amber-500 text-3xl mb-3"></i><p class="text-slate-600">No children are linked to your account yet. Ask the Headmaster to link your child\'s record.</p></div>','mt-4'); return; }
+ kids.forEach(s=>{
+  const grades=s.grades||[]; const bySub={}; grades.forEach(g=>(bySub[g.subject]=bySub[g.subject]||[]).push(g)); const subjects=Object.keys(bySub).sort();
+  let avg=0; subjects.forEach(sub=>{const arr=bySub[sub];avg+=Math.round(arr.reduce((a,b)=>a+Number(b.mark),0)/arr.length);}); const overall=subjects.length?Math.round(avg/subjects.length):0;
+  const disc=(S.discipline||[]).filter(d=>d.sid===s.id);
+  $('admin-view').innerHTML+=card(`<div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-11 h-11 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold">${esc(s.name.charAt(0))}</div><div><div class="font-bold text-slate-900">${esc(s.name)}</div><div class="text-xs text-slate-500">${esc(s.class||'')} · SDMS ${esc(s.sdms)}</div></div></div><button onclick="openReport('${s.id}')" class="text-brand-600 hover:text-brand-800 text-sm font-semibold"><i class="fa-solid fa-file-lines mr-1"></i>Report</button></div>
+   <div class="grid grid-cols-3 gap-3 mb-3">${stat('Overall',overall+'%','fa-chart-line','bg-sky-100 text-sky-700')}${stat('Wallet',money(s.wallet||0),'fa-wallet',(s.wallet||0)<0?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700')}${stat('Discipline',disc.length,'fa-gavel','bg-amber-100 text-amber-700')}</div>
+   ${subjects.length?`<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Subject</th><th class="py-2 pr-3 text-center">Average</th><th class="py-2 pr-3 text-center">Grade</th></tr></thead><tbody>`+subjects.map(sub=>{const arr=bySub[sub];const m=Math.round(arr.reduce((a,b)=>a+Number(b.mark),0)/arr.length);return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium">${esc(sub)}</td><td class="py-2 pr-3 text-center font-bold">${m}</td><td class="py-2 pr-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(m)}">${letterGrade(m)}</span></td></tr>`;}).join('')+`</tbody></table></div>`:'<p class="text-slate-400 text-sm text-center py-3">No results published yet.</p>'}`,'mt-4');
+ });
+}
+</script>
+<script>
+/* ===================== AI ASSISTANT (offline heuristic helper) ===================== */
+function toggleAI(){ const p=$('ai-panel'); p.classList.toggle('translate-x-full'); if(!p.classList.contains('translate-x-full')){ setTimeout(()=>{const inp=$('ai-input');if(inp)inp.focus();},50); } }
+function aiAsk(e){ if(e)e.preventDefault(); const inp=$('ai-input'); const q=inp.value.trim(); if(!q)return; pushAI('user',q); inp.value=''; setTimeout(()=>{ pushAI('bot',aiAnswer(q)); },250); }
+function pushAI(who,text){ const log=$('ai-log'); const el=document.createElement('div'); el.className=who==='user'?'flex justify-end':'flex justify-start'; el.innerHTML=`<div class="${who==='user'?'bg-brand-600 text-white':'bg-slate-100 text-slate-700'} px-3 py-2 rounded-2xl text-sm max-w-[85%] whitespace-pre-wrap">${esc(text)}</div>`; log.appendChild(el); log.scrollTop=log.scrollHeight; }
+function aiAnswer(q){
+ const t=q.toLowerCase();
+ const numStudents=S.students.length, numStaff=S.users.length;
+ if(/how many student/.test(t))return 'There are '+numStudents+' students enrolled.';
+ if(/how many (staff|teacher)/.test(t))return 'There are '+numStaff+' staff accounts ('+S.users.filter(u=>u.role==='Teacher').length+' teachers).';
+ if(/outstanding|owe|debt/.test(t)){ const o=S.students.filter(s=>(s.wallet||0)<0); return o.length?('Students with outstanding balances: '+o.map(s=>s.name+' ('+money(s.wallet)+')').join(', ')):'No students currently owe money.'; }
+ if(/collected|revenue|income/.test(t)){ const c=(S.transactions||[]).filter(x=>x.dir==='credit').reduce((a,b)=>a+b.amount,0); return 'Total collected so far: '+money(c)+'.'; }
+ if(/top|best student/.test(t)){ let best=null,bestAvg=-1; S.students.forEach(s=>{const g=s.grades||[];if(!g.length)return;const avg=g.reduce((a,b)=>a+Number(b.mark),0)/g.length;if(avg>bestAvg){bestAvg=avg;best=s;}}); return best?('Top performer: '+best.name+' with an average of '+Math.round(bestAvg)+'%.'):'No marks recorded yet.'; }
+ if(/subject/.test(t))return 'Subjects in the catalogue: '+((S.subjects||[]).join(', ')||'none yet')+'.';
+ if(/help|what can you/.test(t))return 'I can answer questions about students, staff, finances, outstanding balances, top performers and subjects. Try: "how many students", "who owes money", "total collected".';
+ if(/hello|hi|hey/.test(t))return 'Hello '+user.name+'! How can I help you run '+school.name+' today?';
+ return 'I can help with quick stats about students, staff, finances and academics. Try asking "how many students" or "who has outstanding fees".';
+}
+</script>
+<script>
+/* ===================== GLUE: dates, aliases, AI, notifications ===================== */
+function fmtDate(ts){ if(!ts)return ''; return String(ts).replace('T',' ').slice(0,16); }
+function renderElearning(){ return renderELearning(); }
+
+/* AI helper panel */
+function openAI(){ const p=$('ai-panel'); p.classList.remove('hidden'); p.classList.add('flex'); $('ai-fab').classList.add('hidden'); aiGreet(); setTimeout(()=>{const i=$('ai-input'); if(i)i.focus();},60); }
+function closeAI(){ const p=$('ai-panel'); p.classList.add('hidden'); p.classList.remove('flex'); $('ai-fab').classList.remove('hidden'); $('ai-fab').classList.add('flex'); }
+function pushAIMsg(who,text){ const log=$('ai-messages'); if(!log)return; const el=document.createElement('div'); el.className=who==='user'?'flex justify-end':'flex justify-start'; el.innerHTML=`<div class="${who==='user'?'bg-indigo-600 text-white':'bg-white border border-slate-200 text-slate-700'} px-3 py-2 rounded-2xl text-sm max-w-[85%] whitespace-pre-wrap shadow-sm">${esc(text)}</div>`; log.appendChild(el); log.scrollTop=log.scrollHeight; }
+function askAI(e){ if(e)e.preventDefault(); const inp=$('ai-input'); const q=inp.value.trim(); if(!q)return; pushAIMsg('user',q); inp.value=''; setTimeout(()=>pushAIMsg('bot',aiAnswer(q)),250); }
+function aiQuick(q){ const inp=$('ai-input'); if(inp)inp.value=q; askAI(); }
+function renderAISuggestions(){ const s=$('ai-suggestions'); if(!s)return; const sugg=['How many students','Who owes money','Total collected','Top student']; s.innerHTML=sugg.map(x=>`<button type="button" onclick="aiQuick('${x}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg">${esc(x)}</button>`).join(''); }
+function aiGreet(){ const log=$('ai-messages'); if(log&&!log.dataset.greeted){ log.dataset.greeted='1'; pushAIMsg('bot','Hi '+((user&&user.name)||'there')+'! I can answer quick questions about students, staff, finances and academics.'); renderAISuggestions(); } }
+
+/* Notifications */
+function notify(title,body){ if(!S.notifications)S.notifications=[]; S.notifications.unshift({id:uid(),title,body:body||'',ts:now(),read:false}); if(S.notifications.length>200)S.notifications.length=200; }
+function updateNotifBell(){ const b=$('notif-badge'); if(!b)return; const n=(S.notifications||[]).filter(x=>!x.read).length; if(n>0){ b.textContent=n>99?'99+':n; b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); } }
+function openNotifications(){ const list=(S.notifications||[]).slice(); showForm('Notifications', list.length?`<div class="space-y-2">`+list.map(n=>`<div class="bg-slate-50 rounded-xl p-3"><div class="font-semibold text-sm text-slate-800">${esc(n.title)}</div>${n.body?`<div class="text-xs text-slate-500 mt-0.5">${esc(n.body)}</div>`:''}<div class="text-[11px] text-slate-400 mt-1">${fmtDate(n.ts)}</div></div>`).join('')+`</div>`:'<p class="text-slate-400 text-center py-6">No notifications.</p>'); (S.notifications||[]).forEach(x=>x.read=true); save(); updateNotifBell(); }
+
+/* ===================== DEFAULT PERMISSIONS ===================== */
+const DEFAULT_PERMS={
+ DOS:['dashboard','students','subjects','academics','attendance','timetable','elearning','messages','permissions'],
+ DOD:['dashboard','students','discipline','attendance','messages','permissions'],
+ Bursar:['dashboard','students','finances','messages'],
+ Teacher:['dashboard','students','academics','attendance','timetable','elearning','messages'],
+ Librarian:['dashboard','students','library','audit','messages']
+};
+
+/* ===================== BOOT ===================== */
+function boot(){
+ loadDB();
+ try{ showAuth('login'); }catch(e){}
+ if(resumeSession()){ enterApp(); }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+</script>
+</body>
+</html>
